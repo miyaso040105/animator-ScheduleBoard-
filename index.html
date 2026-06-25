@@ -3194,6 +3194,39 @@
 <input id="fileInput" type="file" accept="application/json" hidden>
 
 <script>
+/*
+  Visitor analytics setup
+  1. Create a Google Analytics 4 Web data stream.
+  2. Copy its Measurement ID, e.g. G-XXXXXXXXXX.
+  3. Replace the value below.
+  4. If this stays as "G-XXXXXXXXXX", analytics stays disabled.
+*/
+const GA_MEASUREMENT_ID = "G-XXXXXXXXXX";
+
+function isAnalyticsEnabled(){
+  return /^G-[A-Z0-9]+$/i.test(GA_MEASUREMENT_ID) && GA_MEASUREMENT_ID !== "G-XXXXXXXXXX";
+}
+
+function initAnalytics(){
+  if(!isAnalyticsEnabled()) return;
+
+  const tag = document.createElement("script");
+  tag.async = true;
+  tag.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
+  document.head.appendChild(tag);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ window.dataLayer.push(arguments); }
+  window.gtag = gtag;
+  gtag("js", new Date());
+  gtag("config", GA_MEASUREMENT_ID, {
+    send_page_view:true,
+    app_name:"Animator Schedule Board"
+  });
+}
+
+initAnalytics();
+
 const STORAGE_KEY = "animator_schedule_board_public_empty_v1";
 const OLD_STORAGE_KEY = "animator_schedule_board_mvp_v1";
 
@@ -3593,6 +3626,10 @@ const GUIDE_CONTENT = {
     {title:"저장", items:[
       "데이터는 브라우저에 자동 저장됩니다.",
       "다른 PC로 옮길 때는 JSON 내보내기 / 가져오기를 사용합니다."
+    ]},
+    {title:"관리자 통계", items:[
+      "index.html의 GA_MEASUREMENT_ID를 본인 GA4 ID로 바꾸면 방문 통계를 볼 수 있습니다.",
+      "사용자 수, 접속 국가, 사용 기기는 Google Analytics에서 확인합니다."
     ]}
   ],
   ja:[
@@ -3619,6 +3656,10 @@ const GUIDE_CONTENT = {
     {title:"保存", items:[
       "データはブラウザに自動保存されます。",
       "別PCへ移動する場合はJSON書き出し / 読み込みを使います。"
+    ]},
+    {title:"管理者統計", items:[
+      "index.html の GA_MEASUREMENT_ID を自分のGA4 IDに変更すると、訪問統計を見られます。",
+      "ユーザー数、アクセス国、使用デバイスは Google Analytics で確認します。"
     ]}
   ],
   en:[
@@ -3645,6 +3686,10 @@ const GUIDE_CONTENT = {
     {title:"Save", items:[
       "Data is saved automatically in the browser.",
       "Use JSON export/import to move data to another PC."
+    ]},
+    {title:"Admin analytics", items:[
+      "Replace GA_MEASUREMENT_ID in index.html with your GA4 ID to see visitor analytics.",
+      "User count, country, and device data are checked in Google Analytics."
     ]}
   ]
 };
