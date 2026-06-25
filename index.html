@@ -1,0 +1,5878 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>Animator Schedule Board MVP</title>
+
+<style>
+  :root{
+    --bg:#eef2f6;
+    --bg2:#e4e9ef;
+    --panel:#ffffff;
+    --panel-soft:#f8fafc;
+    --grid:#d7dde5;
+    --grid-strong:#8c95a2;
+    --grid-dark:#202020;
+    --head:#565d68;
+    --head2:#464d57;
+    --head-text:#f8fafc;
+    --green:#cfeecf;
+    --green-deep:#1d7a41;
+    --pink:#ffd0d8;
+    --pink-deep:#b32543;
+    --yellow:#fff2b8;
+    --yellow-deep:#8a6a00;
+    --orange:#ffe3bd;
+    --orange-deep:#d96a0c;
+    --text:#111827;
+    --muted:#667085;
+    --accent:#14833b;
+    --danger:#b42318;
+    --shadow:0 10px 28px rgba(15, 23, 42, .08);
+    --radius:16px;
+    --header1:22px;
+    --header2:22px;
+    --progressTop:56px;
+    --sheetMin:720px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Noto Sans JP", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,.85), rgba(255,255,255,0) 28%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    color:var(--text);
+    overflow:hidden;
+  }
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto auto auto auto auto minmax(0,1fr);
+    gap:8px;
+    padding:10px;
+    overflow:hidden;
+  }
+  .topbar{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+    justify-content:space-between;
+    padding:12px 16px;
+    background:linear-gradient(180deg, #313740 0%, #232931 100%);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+  }
+  .brand{
+    display:grid;
+    gap:4px;
+  }
+  .brand h1{
+    font-size:22px;
+    line-height:1.15;
+    margin:0;
+    font-weight:900;
+    letter-spacing:.02em;
+  }
+  .brand .subtitle{
+    font-size:14px;
+    color:rgba(255,255,255,.72);
+    letter-spacing:.04em;
+  }
+  .topbar .right{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  button, input, select{
+    font:inherit;
+  }
+  button{
+    border:1px solid #cad3df;
+    background:linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%);
+    color:#182230;
+    border-radius:10px;
+    padding:8px 12px;
+    cursor:pointer;
+    font-weight:800;
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset;
+    transition:.15s ease;
+  }
+  button:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 16px rgba(15,23,42,.08);
+  }
+  button.primary{
+    background:linear-gradient(180deg, #1fa55d 0%, #16864a 100%);
+    color:#fff;
+    border-color:#0e6d3a;
+  }
+  button.danger{
+    background:linear-gradient(180deg, #fff7f8 0%, #ffeef1 100%);
+    color:#9f1239;
+    border-color:#e2a6b5;
+  }
+  button:active{transform:translateY(1px)}
+
+  .language-picker{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 8px;
+    border:1px solid #d9e1ea;
+    border-radius:999px;
+    background:#fff;
+    font-size:12px;
+    font-weight:900;
+    color:#475467;
+  }
+  .language-picker select{
+    min-width:96px;
+    padding:6px 8px;
+    border:1px solid #c6d0db;
+    border-radius:999px;
+    background:#fff;
+    font-weight:900;
+  }
+  .summary{
+    display:none;
+  }
+  .card{
+    background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border:1px solid #d9e1ea;
+    border-radius:10px;
+    padding:7px 10px;
+    min-height:48px;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    height:4px;
+    background:linear-gradient(90deg, #6b7280, #cbd5e1);
+  }
+  .card:nth-child(3)::before,
+  .card:nth-child(4)::before,
+  .card:nth-child(5)::before,
+  .card:nth-child(6)::before{
+    background:linear-gradient(90deg, #1e9d55, #8ce6ae);
+  }
+  .card .label{
+    font-size:12px;
+    color:#667085;
+    font-weight:800;
+  }
+  .card .value{
+    font-size:24px;
+    font-weight:900;
+    margin-top:4px;
+    letter-spacing:.01em;
+  }
+  .toolbar{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    padding:8px 10px;
+    background:rgba(255,255,255,.88);
+    backdrop-filter:blur(8px);
+    border:1px solid #d9e1ea;
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    min-width:0;
+  }
+  .toolbar label{
+    font-size:14px;
+    font-weight:900;
+    color:#475467;
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .toolbar input,
+  .toolbar select{
+    width:118px;
+    border:1px solid #c6d0db;
+    border-radius:8px;
+    padding:6px 8px;
+    background:#fff;
+    color:#111827;
+  }
+  .toolbar select{
+    width:150px;
+    font-weight:800;
+  }
+  .toolbar input.small{width:84px}
+  .toolbar input.tiny{width:64px}
+  #loDeadlineDate,#gengaDeadlineDate{width:138px}
+  .toolbar .spacer{flex:1}
+  .hint{
+    font-size:13px;
+    color:#667085;
+    background:#f5f8fb;
+    border:1px dashed #d0d8e4;
+    padding:5px 8px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  .control-panel{
+    display:grid;
+    grid-template-columns:1.15fr 1.35fr .7fr;
+    gap:8px;
+    min-width:0;
+  }
+  .control-group{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex-wrap:wrap;
+    padding:8px 10px;
+    background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border:1px solid #d9e1ea;
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    min-width:0;
+  }
+  .control-title{
+    font-size:13px;
+    font-weight:950;
+    color:#475467;
+    letter-spacing:.08em;
+    padding:4px 8px;
+    border-radius:999px;
+    background:#eef2f7;
+    white-space:nowrap;
+  }
+  .control-group label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:14px;
+    font-weight:900;
+    color:#475467;
+    white-space:nowrap;
+  }
+  .control-group input{
+    border:1px solid #c6d0db;
+    border-radius:8px;
+    padding:6px 8px;
+    background:#fff;
+    color:#111827;
+  }
+  .control-group input.tiny{width:64px}
+  .danger-zone{
+    justify-content:flex-end;
+  }
+  .wrap{
+    padding:0;
+    overflow:auto;
+    min-height:0;
+    background:#fff;
+    border:1px solid #d9e1ea;
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    overscroll-behavior:contain;
+  }
+  table{
+    border-collapse:separate;
+    border-spacing:0;
+    min-width:var(--sheetMin);
+    width:100%;
+    table-layout:fixed;
+    background:white;
+    margin-top:0;
+  }
+  th, td{
+    border-right:1px solid var(--grid);
+    border-bottom:1px solid var(--grid);
+    height:30px;
+    padding:3px 6px;
+    text-align:center;
+    vertical-align:middle;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:14px;
+  }
+  thead th{
+    background:var(--head);
+    color:var(--head-text);
+    font-weight:900;
+    position:sticky;
+    top:0;
+    z-index:20;
+    border-right:1px solid #757e89;
+    border-bottom:1px solid #31363e;
+    box-shadow:0 1px 0 rgba(255,255,255,.08) inset;
+  }
+  thead tr:first-child th{
+    top:0;
+    height:28px;
+    font-size:14px;
+    letter-spacing:.02em;
+  }
+  thead tr:nth-child(2) th{
+    background:var(--head2);
+    top:28px;
+    z-index:21;
+    height:28px;
+  }
+  tbody tr:nth-child(even){background:#fbfcfe}
+  tbody tr:hover td{background:#f4f9f5}
+  .group{
+    border-left:2px solid #1f2937!important;
+    border-right:2px solid #1f2937!important;
+  }
+  .thick-left{
+    border-left:2px solid #1f2937!important;
+  }
+  .thick-right{
+    border-right:2px solid #1f2937!important;
+  }
+  .project-cell, .episode-cell{
+    font-weight:900;
+    background:linear-gradient(180deg, #ffffff 0%, #f6f7f9 100%)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .project-cell{
+    font-size:22px;
+    letter-spacing:.02em;
+  }
+  .episode-cell{
+    font-size:22px;
+  }
+  .cut-cell, .time-cell{
+    text-align:left;
+    padding-left:6px;
+    font-weight:700;
+    cursor:text;
+  }
+  [contenteditable="true"]:focus{
+    outline:2px solid rgba(34,197,94,.55);
+    outline-offset:-2px;
+    background:#fffef4;
+  }
+  .time-cell{font-variant-numeric:tabular-nums}
+  .work-cell{
+    cursor:pointer;
+    position:relative;
+    background:#fff;
+    text-align:center;
+    font-weight:950;
+    vertical-align:middle;
+  }
+  .work-cell::before{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+  }
+  .work-cell.state-done::before{
+    content:"○";
+    color:#2563eb;
+    font-size:20px;
+    font-weight:950;
+  }
+  .work-cell.state-progress::before{
+    content:"▲";
+    color:#d97706;
+    font-size:17px;
+    font-weight:950;
+  }
+  .work-cell.state-nigen::before{
+    content:"二原";
+    color:#fff;
+    background:#111827;
+    border-radius:5px;
+    padding:3px 4px;
+    font-size:11px;
+    font-weight:950;
+    letter-spacing:-.08em;
+  }
+  .work-cell.check-done::before{
+    content:"○";
+    color:#d97706;
+    font-size:18px;
+    font-weight:950;
+  }
+
+  tr.row-stage-lo td:not(.project-cell):not(.episode-cell){
+    background:#e9f8ee!important;
+  }
+  tr.row-stage-check td:not(.project-cell):not(.episode-cell),
+  tr.row-stage-progress td:not(.project-cell):not(.episode-cell){
+    background:#fff7cc!important;
+  }
+  tr.row-stage-genga td:not(.project-cell):not(.episode-cell){
+    background:#eceff3!important;
+    color:#6b7280;
+  }
+  tr.row-stage-genga td.cut-cell,
+  tr.row-stage-genga td.time-cell,
+  tr.row-stage-genga td.work-cell,
+  tr.row-stage-nigen td.cut-cell,
+  tr.row-stage-nigen td.time-cell,
+  tr.row-stage-nigen td.work-cell{
+    opacity:.62;
+  }
+  tr.row-stage-genga td.selected-cell,
+  tr.row-stage-nigen td.selected-cell{
+    opacity:1;
+  }
+  tr.row-stage-nigen td:not(.project-cell):not(.episode-cell){
+    background:#eceff3!important;
+    color:#6b7280;
+  }
+  .project-cell, .episode-cell{
+    cursor:pointer;
+    user-select:none;
+  }
+  .project-cell::after,
+  .episode-cell::after{
+    content:"";
+  }
+  .progress-cell{
+    font-weight:900;
+    font-variant-numeric:tabular-nums;
+  }
+  .progress-cell.ok{
+    background:var(--green)!important;
+    color:var(--green-deep);
+  }
+  .progress-cell.warn{
+    background:var(--pink)!important;
+    color:var(--pink-deep);
+  }
+  .progress-cell.mid{
+    background:var(--yellow)!important;
+    color:var(--yellow-deep);
+  }
+  .progress-summary-row td{
+    position:sticky;
+    top:var(--progressTop);
+    z-index:15;
+    background:#fff;
+    font-weight:900;
+    box-shadow:0 6px 14px rgba(15,23,42,.06);
+  }
+  .alert-cell{
+    background:var(--orange);
+    color:var(--orange-deep);
+    font-weight:900;
+  }
+  .row-selected td{
+    background:inherit;
+  }
+  td.selected-cell{
+    background:#ecfdf3!important;
+    outline:2px solid #16a34a;
+    outline-offset:-2px;
+    position:relative;
+    z-index:18;
+  }
+  td.selected-range{
+    background:#e7f7ee!important;
+    box-shadow:inset 0 0 0 1px rgba(22,163,74,.42);
+  }
+  td.selected-range.range-edge-top{border-top:2px solid #16a34a!important}
+  td.selected-range.range-edge-bottom{border-bottom:2px solid #16a34a!important}
+  td.selected-range.range-edge-left{border-left:2px solid #16a34a!important}
+  td.selected-range.range-edge-right{border-right:2px solid #16a34a!important}
+  .freeze-project.selected-cell,
+  .freeze-episode.selected-cell,
+  .freeze-cut.selected-cell,
+  .freeze-time.selected-cell{
+    background:#ecfdf3!important;
+  }
+  td[contenteditable="true"]{
+    background:transparent;
+    cursor:text;
+  }
+  td[contenteditable="true"]:focus{
+    outline:2px solid #16a34a;
+    outline-offset:-2px;
+    background:#fffef0!important;
+  }
+
+
+  .project-stack{
+    display:grid;
+    gap:10px;
+    min-height:0;
+  }
+
+  .left-table-zone{
+    position:relative;
+    overflow:auto;
+    background:#f8fafc;
+  }
+  .fixed-sheet-head{
+    position:sticky;
+    top:0;
+    z-index:80;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(15,23,42,.12);
+  }
+  .fixed-sheet-head table{
+    margin:0;
+    min-width:var(--sheetMin);
+    width:100%;
+    table-layout:fixed;
+  }
+  .sheet-body{
+    padding:0;
+    min-width:var(--sheetMin);
+  }
+
+  .work-group{
+    border-top:1px solid #cfd8e3;
+    border-bottom:1px solid #cfd8e3;
+    border-left:0;
+    border-right:0;
+    border-radius:12px;
+    overflow:hidden;
+    background:#f8fafc;
+    box-shadow:0 6px 16px rgba(15,23,42,.05);
+  }
+  .work-group-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:8px 12px;
+    background:linear-gradient(180deg,#3f4650 0%,#2f3640 100%);
+    color:#fff;
+    font-weight:950;
+    cursor:grab;
+  }
+  .work-group-head:active{
+    cursor:grabbing;
+  }
+  .work-group-head strong{
+    font-size:16px;
+    letter-spacing:.03em;
+  }
+  .work-group-head span{
+    font-size:13px;
+    opacity:.82;
+    font-weight:850;
+  }
+
+  .work-group-head-main{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+  }
+  .collapse-toggle,
+  .episode-collapse-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;
+    height:26px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,.12);
+    color:inherit;
+    box-shadow:none;
+    padding:0;
+    font-size:15px;
+    line-height:1;
+    font-weight:950;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .collapse-toggle:hover{
+    background:rgba(255,255,255,.22);
+  }
+  .episode-cell-content{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-width:0;
+  }
+
+  .episode-info{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    min-width:0;
+  }
+  .episode-total-time{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    max-width:100%;
+    padding:3px 6px;
+    border-radius:999px;
+    background:#eef2f7;
+    color:#334155;
+    border:1px solid #cbd5e1;
+    font-size:11px;
+    font-weight:950;
+    line-height:1.15;
+    white-space:nowrap;
+  }
+  .collapsed-episode-row .episode-total-time{
+    background:#fff;
+  }
+  .episode-collapse-toggle{
+    width:24px;
+    height:24px;
+    border-color:#cbd5e1;
+    background:#f8fafc;
+    color:#334155;
+    font-size:13px;
+  }
+  .episode-collapse-toggle:hover{
+    background:#eaf0f7;
+  }
+  .work-group.collapsed{
+    background:#edf2f7;
+  }
+
+  .drag-handle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:24px;
+    height:26px;
+    border-radius:8px;
+    background:rgba(255,255,255,.10);
+    color:rgba(255,255,255,.86);
+    font-size:16px;
+    font-weight:950;
+    cursor:grab;
+    flex:0 0 auto;
+  }
+  .work-group.dragging{
+    opacity:.45;
+    transform:scale(.998);
+  }
+  .work-group.drop-before{
+    box-shadow:0 -5px 0 #2563eb, 0 10px 22px rgba(37,99,235,.18);
+  }
+  .work-group.drop-after{
+    box-shadow:0 5px 0 #2563eb, 0 10px 22px rgba(37,99,235,.18);
+  }
+  .collapsed-episode-row .empty-row{
+    padding:18px!important;
+    background:#f8fafc!important;
+    color:#667085;
+    font-size:14px;
+    letter-spacing:.02em;
+  }
+  .work-group-body{
+    display:grid;
+    gap:8px;
+    padding:8px;
+  }
+
+  .work-table-wrap{
+    padding:0;
+    background:#f8fafc;
+  }
+  .work-table-wrap table{
+    min-width:var(--sheetMin);
+    width:100%;
+    table-layout:fixed;
+    margin:0;
+    background:#fff;
+    border-left:0;
+    border-right:0;
+    border-top:0;
+    border-bottom:0;
+  }
+
+  .work-table-wrap td,
+  .work-table-wrap th{
+    box-sizing:border-box;
+  }
+  .work-table-wrap .freeze-project,
+  .work-table-wrap .freeze-episode,
+  .work-table-wrap .freeze-cut,
+  .work-table-wrap .freeze-time{
+    position:static!important;
+    left:auto!important;
+    z-index:auto!important;
+  }
+  .work-table-wrap td.selected-cell{
+    position:relative;
+    z-index:2;
+  }
+  .work-table-wrap td[contenteditable="true"]{
+    caret-color:#111827;
+    min-width:0;
+  }
+  .work-row-active td{
+    box-shadow:inset 0 0 0 999px rgba(22,163,74,.05);
+  }
+  tr.episode-start td{
+    border-top:2px solid #aeb8c5;
+  }
+  tr.episode-start:first-child td{
+    border-top:0;
+  }
+  .episode-cell{
+    cursor:pointer;
+  }
+  .episode-cell::after{
+    content:"";
+  }
+
+
+  .project-block{
+    border:1px solid #d9e1ea;
+    border-radius:12px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 4px 12px rgba(15,23,42,.04);
+    min-height:190px;
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .project-block.active{
+    box-shadow:0 0 0 3px rgba(22,163,74,.14), 0 8px 18px rgba(15,23,42,.06);
+    border-color:#98d7af;
+  }
+  .project-block-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:7px 10px;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef3f8 100%);
+    border-bottom:1px solid #d9e1ea;
+    cursor:pointer;
+  }
+  .project-block-title strong{
+    font-size:12px;
+    color:#111827;
+  }
+  .project-block-title span{
+    color:#667085;
+    font-size:11px;
+    font-weight:800;
+  }
+  .project-block-title .badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:48px;
+    border-radius:999px;
+    padding:4px 8px;
+    background:#ecfdf3;
+    color:#14833b;
+    font-size:10px;
+    font-weight:950;
+  }
+  .project-block:not(.active) .project-block-title .badge{
+    background:#eef2f7;
+    color:#667085;
+  }
+  .project-block .table-zone{
+    border-right:0;
+    overflow:visible;
+  }
+  .project-block table{
+    min-width:var(--sheetMin);
+    margin:0;
+  }
+
+  .sheet-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+    gap:8px;
+    min-height:0;
+    height:100%;
+  }
+  .table-zone{
+    overflow:auto;
+    min-width:0;
+    min-height:0;
+    border-right:1px solid #d9e1ea;
+  }
+  .side-progress{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-auto-rows:auto;
+    gap:8px;
+    align-content:start;
+    padding:8px;
+    background:linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+    border-left:1px solid #d9e1ea;
+    min-width:0;
+  }
+  .side-progress::before{
+    content:attr(data-title);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:40px;
+    border-radius:10px;
+    background:linear-gradient(180deg, #565d68 0%, #343b45 100%);
+    color:#fff;
+    font-size:16px;
+    font-weight:950;
+    letter-spacing:.12em;
+    grid-column:1 / -1;
+  }
+  .side-progress .deadline-panel{
+    grid-column:1 / -1;
+  }
+  @media (max-width:1100px){
+    .side-progress{
+      grid-template-columns:1fr;
+    }
+    .side-progress .deadline-panel{
+      grid-column:auto;
+    }
+  }
+  .progress-title{
+    display:none;
+  }
+  .progress-tile{
+    --hue:0;
+    background:hsl(var(--hue) 78% 93%);
+    color:hsl(var(--hue) 70% 25%);
+    border:1px solid hsl(var(--hue) 52% 76%);
+    border-radius:12px;
+    padding:12px 14px;
+    box-shadow:0 4px 12px rgba(15,23,42,.06);
+    transition:background-color .45s ease, border-color .45s ease, color .45s ease;
+    overflow:hidden;
+    min-height:78px;
+  }
+  .progress-tile-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    font-size:14px;
+    font-weight:950;
+    letter-spacing:.05em;
+  }
+  .progress-count{
+    margin-top:5px;
+    font-size:30px;
+    line-height:1;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+    animation:progressPop .32s ease;
+  }
+  .progress-count small{
+    font-size:14px;
+    color:rgba(0,0,0,.46);
+    font-weight:900;
+  }
+  .progress-bar{
+    margin-top:8px;
+    height:7px;
+    border-radius:999px;
+    background:rgba(255,255,255,.72);
+    overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);
+  }
+  .progress-bar i{
+    display:block;
+    width:calc(var(--p) * 1%);
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg, hsl(var(--hue) 68% 46%), hsl(var(--hue) 76% 56%));
+    transition:width .55s ease, background-color .45s ease;
+  }
+  .progress-percent{
+    margin-top:5px;
+    font-size:13px;
+    font-weight:900;
+    color:rgba(0,0,0,.48);
+  }
+  .deadline-panel{
+    background:#fff;
+    border:1px solid #d9e1ea;
+    border-radius:12px;
+    padding:8px;
+    box-shadow:0 4px 12px rgba(15,23,42,.06);
+  }
+  .deadline-title{
+    font-size:14px;
+    font-weight:950;
+    color:#475467;
+    letter-spacing:.08em;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .deadline-title span:last-child{
+    color:#111827;
+    letter-spacing:0;
+  }
+  .deadline-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    margin-top:8px;
+  }
+  .deadline-metric{
+    background:#f8fafc;
+    border:1px solid #e5ebf2;
+    border-radius:9px;
+    padding:7px 8px;
+  }
+  .deadline-metric .k{
+    color:#667085;
+    font-size:13px;
+    font-weight:900;
+  }
+  .deadline-metric .v{
+    margin-top:2px;
+    color:#111827;
+    font-size:28px;
+    line-height:1;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+  }
+  .deadline-note{
+    margin-top:7px;
+    color:#667085;
+    font-size:14px;
+    line-height:1.45;
+    font-weight:750;
+  }
+
+  .deadline-stage-list{
+    display:grid;
+    gap:6px;
+    margin-top:8px;
+  }
+  .deadline-stage{
+    display:grid;
+    grid-template-columns:58px 1fr auto;
+    align-items:center;
+    gap:7px;
+    background:#f8fafc;
+    border:1px solid #e5ebf2;
+    border-radius:9px;
+    padding:7px 8px;
+  }
+  .deadline-stage-name{
+    font-size:14px;
+    font-weight:950;
+    color:#111827;
+  }
+  .deadline-stage-bar{
+    height:6px;
+    border-radius:999px;
+    background:#e5ebf2;
+    overflow:hidden;
+  }
+  .deadline-stage-bar i{
+    display:block;
+    height:100%;
+    width:calc(var(--stage-p) * 1%);
+    border-radius:inherit;
+    background:linear-gradient(90deg, #d92d20, #f3b233, #18a05e);
+    transition:width .45s ease;
+  }
+  .deadline-stage-meta{
+    min-width:74px;
+    text-align:right;
+    font-size:10px;
+    font-weight:900;
+    color:#667085;
+  }
+  .deadline-stage-daily{
+    color:#111827;
+    font-weight:950;
+  }
+  .deadline-warn{
+    color:#b42318;
+    font-weight:900;
+  }
+  .deadline-ok{
+    color:#14833b;
+    font-weight:900;
+  }
+  @keyframes progressPop{
+    from{transform:scale(.96); opacity:.62}
+    to{transform:scale(1); opacity:1}
+  }
+
+  /* Excel처럼 좌측 컷 정보 칼럼 고정 */
+  .freeze-project{
+    position:sticky;
+    left:0;
+    z-index:12;
+  }
+  .freeze-episode{
+    position:sticky;
+    left:120px;
+    z-index:12;
+  }
+  .freeze-cut{
+    position:sticky;
+    left:172px;
+    z-index:11;
+  }
+  .freeze-time{
+    position:sticky;
+    left:236px;
+    z-index:11;
+  }
+  thead .sticky-project-head{
+    position:sticky;
+    left:0;
+    z-index:31;
+  }
+  thead .sticky-episode-head{
+    position:sticky;
+    left:120px;
+    z-index:31;
+  }
+  thead .sticky-cut-head{
+    position:sticky;
+    left:172px;
+    z-index:31;
+  }
+  thead .sticky-time-head{
+    position:sticky;
+    left:236px;
+    z-index:31;
+  }
+  tbody td.freeze-cut,
+  tbody td.freeze-time{
+    background:#fff!important;
+  }
+  tbody tr:nth-child(even) td.freeze-cut,
+  tbody tr:nth-child(even) td.freeze-time{
+    background:#fbfcfe!important;
+  }
+  tbody tr:hover td.freeze-cut,
+  tbody tr:hover td.freeze-time{
+    background:#f4f9f5!important;
+  }
+  .row-selected td.freeze-cut,
+  .row-selected td.freeze-time{
+    background:#ecfdf3!important;
+  }
+
+  .modal-bg{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.42);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(4px);
+  }
+  .modal{
+    width:min(760px, 100%);
+    background:#fff;
+    border-radius:18px;
+    border:1px solid #d8e0ea;
+    padding:18px;
+    box-shadow:0 24px 60px rgba(15,23,42,.22);
+  }
+  .modal h2{
+    margin:0 0 12px;
+    font-size:20px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
+  }
+  .form-grid label{
+    display:grid;
+    gap:6px;
+    font-size:12px;
+    font-weight:900;
+    color:#475467;
+  }
+  .form-grid input{
+    border:1px solid #c6d0db;
+    border-radius:10px;
+    padding:10px 12px;
+    background:#fff;
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+    margin-top:16px;
+  }
+
+  .stage-menu{
+    position:fixed;
+    z-index:9999;
+    min-width:160px;
+    background:#ffffff;
+    border:1px solid #cfd8e3;
+    border-radius:14px;
+    box-shadow:0 18px 45px rgba(16,24,40,.22);
+    padding:6px;
+  }
+  .stage-menu[hidden]{
+    display:none!important;
+  }
+  .stage-menu button{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:0;
+    background:transparent;
+    color:#111827;
+    box-shadow:none;
+    border-radius:10px;
+    padding:8px 10px;
+    justify-content:flex-start;
+    font-weight:900;
+  }
+  .stage-menu button:hover{
+    background:#f2f5f9;
+  }
+  .stage-menu:not(.allow-nigen) .nigen-option{
+    display:none;
+  }
+  .menu-symbol{
+    width:32px;
+    height:24px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+    font-weight:950;
+  }
+  .menu-symbol.progress{
+    color:#d97706;
+  }
+  .menu-symbol.done{
+    color:#2563eb;
+    font-size:18px;
+  }
+  .menu-symbol.nigen{
+    color:#fff;
+    background:#111827;
+    font-size:11px;
+    letter-spacing:-.08em;
+  }
+  .menu-symbol.clear{
+    color:#667085;
+  }
+  .footnote{
+    margin:0;
+    padding:10px 16px 14px;
+    font-size:12px;
+    color:#667085;
+    background:#fbfcfe;
+    border-top:1px solid #e5ebf2;
+  }
+  .empty-row{
+    padding:28px!important;
+    color:#667085;
+    font-weight:900;
+    background:#fff;
+  }
+  @media (max-width:1100px){
+    .summary{grid-template-columns:repeat(3,1fr)}
+    .toolbar{flex-wrap:wrap}
+    .control-panel{grid-template-columns:1fr}
+    .danger-zone{justify-content:flex-start}
+    .sheet-layout{grid-template-columns:1fr}
+    .side-progress{
+      grid-template-columns:repeat(3,1fr);
+      grid-template-rows:auto;
+      border-left:0;
+      border-top:1px solid #d9e1ea;
+    }
+    .side-progress::before{grid-column:1 / -1}
+  }
+  @media (max-width:900px){
+    .summary{grid-template-columns:repeat(2,1fr)}
+    .form-grid{grid-template-columns:repeat(2,1fr)}
+    .topbar{
+      align-items:flex-start;
+      flex-direction:column;
+    }
+    .topbar .right{justify-content:flex-start}
+  }
+
+  /* Lightweight portable mode: 외부 의존성 없이 오래된/저사양 컴퓨터에서도 가볍게 동작하도록 효과 최소화 */
+  :root{
+    --shadow:none;
+    --radius:12px;
+  }
+  *, *::before, *::after{
+    transition:none!important;
+    animation:none!important;
+    scroll-behavior:auto!important;
+  }
+  body{
+    background:#eef2f6!important;
+  }
+  .topbar,
+  .toolbar,
+  .control-panel,
+  .sheet-layout,
+  .fixed-sheet-head,
+  .side-progress,
+  .work-group,
+  .progress-card,
+  .deadline-panel,
+  .modal-card,
+  .stage-menu,
+  button,
+  .card{
+    box-shadow:none!important;
+  }
+  .toolbar,
+  .modal-backdrop{
+    backdrop-filter:none!important;
+  }
+  button:hover{
+    transform:none!important;
+  }
+  .topbar,
+  button,
+  button.primary,
+  button.danger,
+  .card,
+  .work-group-head,
+  .progress-header,
+  .deadline-panel::before,
+  .progress-bar > span,
+  .deadline-bar > span{
+    background-image:none!important;
+  }
+  .topbar{background:#2b3139!important}
+  .work-group-head{background:#3a414b!important}
+  button.primary{background:#16864a!important}
+  .deadline-panel::before{background:#3a414b!important}
+  .progress-bar > span{background:#16a34a!important}
+  .deadline-bar > span{background:#16a34a!important}
+
+  button.utility{
+    background:#ffffff;
+    color:#182230;
+  }
+  button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+    transform:none!important;
+  }
+  .guide-panel{
+    background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border:1px solid #d9e1ea;
+    border-radius:14px;
+    padding:12px 14px;
+    box-shadow:var(--shadow);
+  }
+  .guide-panel[hidden]{
+    display:none!important;
+  }
+  .guide-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  .guide-head h2{
+    margin:0;
+    font-size:17px;
+    font-weight:950;
+    color:var(--text);
+  }
+  .guide-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:8px;
+  }
+  .guide-card{
+    border:1px solid #e5ebf2;
+    border-radius:12px;
+    padding:10px;
+    background:#ffffff;
+  }
+  .guide-card strong{
+    display:block;
+    color:#14833b;
+    font-size:13px;
+    margin-bottom:4px;
+    font-weight:950;
+  }
+  .guide-card p{
+    margin:0;
+    color:#475467;
+    font-size:12px;
+    line-height:1.45;
+    font-weight:750;
+  }
+  .daily-focus{
+    background:linear-gradient(180deg, #dcfce7 0%, #bbf7d0 100%);
+    border:1px solid #86efac;
+    border-radius:14px;
+    padding:14px;
+    color:#14532d;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px 14px;
+    align-items:center;
+    margin-top:8px;
+  }
+  .daily-focus.warn{
+    background:linear-gradient(180deg, #fff7cc 0%, #feeaa1 100%);
+    border-color:#f5c84c;
+    color:#713f12;
+  }
+  .daily-focus.danger{
+    background:linear-gradient(180deg, #fee2e2 0%, #fecaca 100%);
+    border-color:#fca5a5;
+    color:#7f1d1d;
+  }
+  .daily-focus.done{
+    background:linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+    border-color:#7dd3fc;
+    color:#0c4a6e;
+  }
+  .daily-label{
+    font-size:14px;
+    font-weight:950;
+    letter-spacing:.08em;
+  }
+  .daily-value-wrap{
+    grid-row:1 / span 2;
+    grid-column:2;
+    text-align:right;
+    min-width:130px;
+  }
+  .daily-value{
+    font-size:54px;
+    line-height:.92;
+    font-weight:1000;
+    font-variant-numeric:tabular-nums;
+  }
+  .daily-unit{
+    margin-top:3px;
+    font-size:13px;
+    font-weight:950;
+  }
+  .daily-status{
+    font-size:13px;
+    line-height:1.45;
+    font-weight:850;
+  }
+  .deadline-subgrid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:6px;
+    margin-top:8px;
+  }
+  .deadline-stage-list{
+    grid-template-columns:1fr;
+  }
+  .deadline-stage{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+  .deadline-stage-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+  }
+  .deadline-stage-score{
+    font-size:13px;
+    font-weight:950;
+    color:#111827;
+    font-variant-numeric:tabular-nums;
+  }
+  .deadline-stage-bottom{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    font-weight:900;
+    color:#667085;
+  }
+  .deadline-stage-daily{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 7px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+  }
+  .deadline-stage-daily::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#22c55e;
+  }
+
+  :root[data-theme="dark"]{
+    --bg:#0b1020;
+    --bg2:#111827;
+    --panel:#111827;
+    --panel-soft:#172033;
+    --grid:#334155;
+    --grid-strong:#64748b;
+    --head:#1f2937;
+    --head2:#111827;
+    --head-text:#f8fafc;
+    --green:#14532d;
+    --yellow:#713f12;
+    --orange:#7c2d12;
+    --text:#e5e7eb;
+    --muted:#94a3b8;
+    --accent:#22c55e;
+    --danger:#fb7185;
+  }
+  :root[data-theme="dark"] body{
+    background:#0b1020!important;
+    color:var(--text);
+  }
+  :root[data-theme="dark"] .toolbar,
+  :root[data-theme="dark"] .control-group,
+  :root[data-theme="dark"] .wrap,
+  :root[data-theme="dark"] .guide-panel,
+  :root[data-theme="dark"] .deadline-panel,
+  :root[data-theme="dark"] .progress-tile,
+  :root[data-theme="dark"] .modal{
+    background:#111827!important;
+    border-color:#334155!important;
+    color:var(--text)!important;
+  }
+  :root[data-theme="dark"] .topbar{
+    background:#030712!important;
+    border-color:#334155!important;
+  }
+  :root[data-theme="dark"] table,
+  :root[data-theme="dark"] tbody tr:nth-child(even),
+  :root[data-theme="dark"] .empty-row{
+    background:#0f172a!important;
+  }
+  :root[data-theme="dark"] th,
+  :root[data-theme="dark"] td{
+    border-color:#334155;
+  }
+  :root[data-theme="dark"] .fixed-sheet-head table{
+    background:#0f172a!important;
+  }
+  :root[data-theme="dark"] .project-cell,
+  :root[data-theme="dark"] .episode-cell,
+  :root[data-theme="dark"] .work-cell,
+  :root[data-theme="dark"] .guide-card,
+  :root[data-theme="dark"] .deadline-metric,
+  :root[data-theme="dark"] .deadline-stage{
+    background:#172033!important;
+    border-color:#334155!important;
+    color:var(--text)!important;
+  }
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] .language-picker,
+  :root[data-theme="dark"] button.utility{
+    background:#0f172a!important;
+    border-color:#475569!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] button{
+    background:#172033!important;
+    border-color:#475569!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] button.primary{
+    background:#15803d!important;
+    border-color:#166534!important;
+    color:#fff!important;
+  }
+  :root[data-theme="dark"] button.danger{
+    background:#3f111a!important;
+    border-color:#7f1d1d!important;
+    color:#fecdd3!important;
+  }
+  :root[data-theme="dark"] .hint,
+  :root[data-theme="dark"] .control-title,
+  :root[data-theme="dark"] .footnote{
+    background:#172033!important;
+    border-color:#334155!important;
+    color:#94a3b8!important;
+  }
+  :root[data-theme="dark"] .toolbar label,
+  :root[data-theme="dark"] .control-group label,
+  :root[data-theme="dark"] .card .label,
+  :root[data-theme="dark"] .guide-card p,
+  :root[data-theme="dark"] .deadline-title,
+  :root[data-theme="dark"] .deadline-note,
+  :root[data-theme="dark"] .deadline-stage-bottom,
+  :root[data-theme="dark"] .deadline-stage-meta{
+    color:#94a3b8!important;
+  }
+  :root[data-theme="dark"] .deadline-title span:last-child,
+  :root[data-theme="dark"] .deadline-metric .v,
+  :root[data-theme="dark"] .deadline-stage-name,
+  :root[data-theme="dark"] .deadline-stage-score{
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] [contenteditable="true"]:focus{
+    background:#1f2937!important;
+    outline-color:rgba(34,197,94,.85);
+  }
+  :root[data-theme="dark"] tr.row-stage-lo td:not(.project-cell):not(.episode-cell){
+    background:#123522!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-progress td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-check td:not(.project-cell):not(.episode-cell){
+    background:#3d2f0a!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-genga td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-nigen td:not(.project-cell):not(.episode-cell){
+    background:#1f2937!important;
+    color:#94a3b8!important;
+  }
+  :root[data-theme="dark"] .side-progress{
+    background:#0f172a!important;
+    border-color:#334155!important;
+  }
+  :root[data-theme="dark"] .side-progress::before,
+  :root[data-theme="dark"] .work-group-head,
+  :root[data-theme="dark"] .deadline-panel::before{
+    background:#030712!important;
+  }
+
+  @media (max-width:1100px){
+    .guide-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:720px){
+    .guide-grid{grid-template-columns:1fr}
+    .daily-focus{grid-template-columns:1fr}
+    .daily-value-wrap{grid-column:1; grid-row:auto; text-align:left}
+    .deadline-subgrid{grid-template-columns:1fr}
+  }
+
+  /* Guide popup modal */
+  .guide-modal-bg{
+    position:fixed;
+    inset:0;
+    z-index:10020;
+    display:grid;
+    place-items:center;
+    padding:24px;
+    background:rgba(15,23,42,.46);
+    backdrop-filter:blur(8px);
+  }
+  .guide-modal-bg[hidden]{
+    display:none!important;
+  }
+  .guide-modal{
+    width:min(920px, 100%);
+    max-height:min(82vh, 760px);
+    overflow:hidden;
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr);
+    background:#ffffff;
+    border:1px solid #d8e0ea;
+    border-radius:20px;
+    box-shadow:0 28px 90px rgba(15,23,42,.28);
+  }
+  .guide-modal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    padding:20px 22px 16px;
+    border-bottom:1px solid #e5ebf2;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+  }
+  .guide-modal-kicker{
+    margin:0 0 4px;
+    font-size:12px;
+    font-weight:950;
+    letter-spacing:.12em;
+    color:#16803a;
+  }
+  .guide-modal-head h2{
+    margin:0;
+    font-size:22px;
+    font-weight:1000;
+    color:#0f172a;
+  }
+  .guide-close{
+    min-width:84px;
+  }
+  .guide-modal-body{
+    overflow:auto;
+    padding:18px 22px 22px;
+    display:grid;
+    gap:14px;
+    background:#ffffff;
+  }
+  .guide-section{
+    border:1px solid #e5ebf2;
+    border-radius:16px;
+    padding:14px 15px;
+    background:#fbfcfe;
+  }
+  .guide-section h3{
+    margin:0 0 10px;
+    font-size:16px;
+    color:#111827;
+    font-weight:1000;
+  }
+  .guide-section ul{
+    margin:0;
+    padding-left:20px;
+    color:#475467;
+    font-size:13px;
+    line-height:1.65;
+    font-weight:760;
+  }
+  .guide-section li + li{
+    margin-top:5px;
+  }
+
+  /* Refined dark mode v2 */
+  :root[data-theme="dark"]{
+    --bg:#0b1120;
+    --bg2:#0f172a;
+    --panel:#111827;
+    --panel-soft:#172033;
+    --grid:#263449;
+    --grid-strong:#3b4a61;
+    --head:#162032;
+    --head2:#111827;
+    --head-text:#f1f5f9;
+    --green:#123524;
+    --yellow:#3a2e12;
+    --orange:#422414;
+    --text:#e5e7eb;
+    --muted:#9aa6b2;
+    --accent:#34d399;
+    --danger:#fb7185;
+    --shadow:0 18px 48px rgba(0,0,0,.38);
+  }
+  :root[data-theme="dark"] body{
+    background:linear-gradient(180deg,#0b1120 0%,#0f172a 55%,#111827 100%)!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] .app{
+    background:transparent!important;
+  }
+  :root[data-theme="dark"] .topbar{
+    background:rgba(15,23,42,.92)!important;
+    border-bottom:1px solid #263449!important;
+    box-shadow:0 10px 28px rgba(0,0,0,.28)!important;
+  }
+  :root[data-theme="dark"] .topbar h1,
+  :root[data-theme="dark"] .guide-modal-head h2{
+    color:#f8fafc!important;
+  }
+  :root[data-theme="dark"] .credit,
+  :root[data-theme="dark"] .sub,
+  :root[data-theme="dark"] .toolbar label,
+  :root[data-theme="dark"] .control-group label,
+  :root[data-theme="dark"] .card .label,
+  :root[data-theme="dark"] .deadline-title,
+  :root[data-theme="dark"] .deadline-note,
+  :root[data-theme="dark"] .deadline-stage-bottom,
+  :root[data-theme="dark"] .guide-section ul{
+    color:#9aa6b2!important;
+  }
+  :root[data-theme="dark"] .toolbar,
+  :root[data-theme="dark"] .control-panel,
+  :root[data-theme="dark"] .control-group,
+  :root[data-theme="dark"] .wrap,
+  :root[data-theme="dark"] .sheet-layout,
+  :root[data-theme="dark"] .side-progress,
+  :root[data-theme="dark"] .progress-tile,
+  :root[data-theme="dark"] .deadline-panel,
+  :root[data-theme="dark"] .modal,
+  :root[data-theme="dark"] .guide-modal{
+    background:#111827!important;
+    border-color:#263449!important;
+    color:#e5e7eb!important;
+    box-shadow:0 18px 48px rgba(0,0,0,.34)!important;
+  }
+  :root[data-theme="dark"] .fixed-sheet-head table,
+  :root[data-theme="dark"] table,
+  :root[data-theme="dark"] tbody tr:nth-child(even),
+  :root[data-theme="dark"] .empty-row{
+    background:#0f172a!important;
+  }
+  :root[data-theme="dark"] th{
+    background:#162032!important;
+    color:#dbeafe!important;
+    border-color:#263449!important;
+  }
+  :root[data-theme="dark"] th.group{
+    background:#0f1f19!important;
+    color:#bbf7d0!important;
+  }
+  :root[data-theme="dark"] td{
+    background:#0f172a;
+    color:#e5e7eb;
+    border-color:#263449!important;
+  }
+  :root[data-theme="dark"] tbody tr:hover td:not(.project-cell):not(.episode-cell){
+    background:#142033!important;
+  }
+  :root[data-theme="dark"] .project-cell,
+  :root[data-theme="dark"] .episode-cell,
+  :root[data-theme="dark"] .work-cell,
+  :root[data-theme="dark"] .deadline-metric,
+  :root[data-theme="dark"] .deadline-stage,
+  :root[data-theme="dark"] .guide-section{
+    background:#172033!important;
+    border-color:#2c3a50!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] .work-group-head,
+  :root[data-theme="dark"] .side-progress::before,
+  :root[data-theme="dark"] .deadline-panel::before,
+  :root[data-theme="dark"] .guide-modal-head{
+    background:#0f172a!important;
+    border-color:#263449!important;
+  }
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] .language-picker{
+    background:#0b1220!important;
+    border-color:#334155!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] input::placeholder{
+    color:#64748b!important;
+  }
+  :root[data-theme="dark"] button,
+  :root[data-theme="dark"] button.utility{
+    background:#1f2937!important;
+    border-color:#334155!important;
+    color:#e5e7eb!important;
+  }
+  :root[data-theme="dark"] button:hover:not(:disabled){
+    background:#263449!important;
+    border-color:#475569!important;
+  }
+  :root[data-theme="dark"] button.primary{
+    background:#047857!important;
+    border-color:#059669!important;
+    color:#ecfdf5!important;
+  }
+  :root[data-theme="dark"] button.danger{
+    background:#3b1720!important;
+    border-color:#7f1d1d!important;
+    color:#fecdd3!important;
+  }
+  :root[data-theme="dark"] .hint,
+  :root[data-theme="dark"] .control-title,
+  :root[data-theme="dark"] .footnote{
+    background:#0f172a!important;
+    border-color:#263449!important;
+    color:#9aa6b2!important;
+  }
+  :root[data-theme="dark"] [contenteditable="true"]:focus{
+    background:#1e293b!important;
+    outline-color:#34d399!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-lo td:not(.project-cell):not(.episode-cell){
+    background:#102d22!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-progress td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-check td:not(.project-cell):not(.episode-cell){
+    background:#2b2513!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-genga td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-nigen td:not(.project-cell):not(.episode-cell){
+    background:#151d2b!important;
+    color:#94a3b8!important;
+  }
+  :root[data-theme="dark"] .progress-bar{
+    background:#0b1220!important;
+  }
+  :root[data-theme="dark"] .deadline-stage-bar{
+    background:#0b1220!important;
+  }
+  :root[data-theme="dark"] .daily-focus{
+    background:linear-gradient(135deg,#064e3b 0%,#065f46 100%)!important;
+    border-color:#10b981!important;
+    color:#d1fae5!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 14px 32px rgba(0,0,0,.22)!important;
+  }
+  :root[data-theme="dark"] .daily-focus.warn{
+    background:linear-gradient(135deg,#3b2f10 0%,#4a3410 100%)!important;
+    border-color:#a16207!important;
+    color:#fde68a!important;
+  }
+  :root[data-theme="dark"] .daily-focus.danger{
+    background:linear-gradient(135deg,#4c1720 0%,#5f1726 100%)!important;
+    border-color:#e11d48!important;
+    color:#fecdd3!important;
+  }
+  :root[data-theme="dark"] .daily-focus.done{
+    background:linear-gradient(135deg,#0c4a6e 0%,#075985 100%)!important;
+    border-color:#38bdf8!important;
+    color:#e0f2fe!important;
+  }
+  :root[data-theme="dark"] .deadline-stage-score,
+  :root[data-theme="dark"] .deadline-title span:last-child,
+  :root[data-theme="dark"] .deadline-metric .v,
+  :root[data-theme="dark"] .deadline-stage-name{
+    color:#f1f5f9!important;
+  }
+  :root[data-theme="dark"] .guide-modal-bg{
+    background:rgba(2,6,23,.72)!important;
+  }
+  :root[data-theme="dark"] .guide-modal-kicker,
+  :root[data-theme="dark"] .guide-section h3{
+    color:#86efac!important;
+  }
+
+  .row-action-cell{
+    text-align:center;
+    padding:4px!important;
+    background:#fbfcfe;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .cut-row-tools{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+  }
+  .row-insert-btn,
+  .cut-drag-handle{
+    width:24px;
+    height:24px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #d7dee8;
+    border-radius:8px;
+    background:#ffffff;
+    color:#334155;
+    font-weight:950;
+    line-height:1;
+    padding:0;
+    cursor:pointer;
+    box-shadow:0 1px 2px rgba(15,23,42,.06);
+  }
+  .row-insert-btn{
+    color:#15803d;
+  }
+  .cut-drag-handle{
+    cursor:grab;
+    color:#64748b;
+  }
+  .cut-drag-handle:active{
+    cursor:grabbing;
+  }
+  .row-insert-btn:hover,
+  .cut-drag-handle:hover{
+    background:#f0fdf4;
+    border-color:#86efac;
+    color:#166534;
+  }
+  tr.cut-row-dragging td:not(.project-cell):not(.episode-cell){
+    opacity:.42;
+  }
+  tr.cut-drop-before td{
+    border-top:3px solid #22c55e!important;
+  }
+  tr.cut-drop-after td{
+    border-bottom:3px solid #22c55e!important;
+  }
+  :root[data-theme="dark"] .row-action-cell{
+    background:#0f172a!important;
+  }
+  :root[data-theme="dark"] .row-insert-btn,
+  :root[data-theme="dark"] .cut-drag-handle{
+    background:#172033!important;
+    border-color:#334155!important;
+    color:#cbd5e1!important;
+    box-shadow:none;
+  }
+  :root[data-theme="dark"] .row-insert-btn{
+    color:#86efac!important;
+  }
+  :root[data-theme="dark"] .row-insert-btn:hover,
+  :root[data-theme="dark"] .cut-drag-handle:hover{
+    background:#123524!important;
+    border-color:#10b981!important;
+    color:#d1fae5!important;
+  }
+
+  .row-action-cell{
+    text-align:center;
+    padding:4px!important;
+    background:#fbfcfe;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .row-click-target{
+    min-width:28px;
+    height:24px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    color:#64748b;
+    font-weight:950;
+    font-size:12px;
+    cursor:pointer;
+    transition:background .12s ease, color .12s ease, transform .12s ease;
+  }
+  .row-click-target:hover{
+    background:#dcfce7;
+    color:#166534;
+    transform:translateY(-1px);
+  }
+  tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#effdf4!important;
+    box-shadow:inset 0 0 0 2px rgba(34,197,94,.22);
+  }
+  tr.cut-row-selected .row-click-target{
+    background:#16a34a;
+    color:#ffffff;
+  }
+  .row-insert-btn,
+  .cut-drag-handle,
+  .cut-row-tools{
+    display:none!important;
+  }
+  :root[data-theme="dark"] .row-action-cell{
+    background:#0f172a!important;
+  }
+  :root[data-theme="dark"] .row-click-target{
+    color:#94a3b8!important;
+  }
+  :root[data-theme="dark"] .row-click-target:hover{
+    background:#123524!important;
+    color:#d1fae5!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#123524!important;
+    box-shadow:inset 0 0 0 2px rgba(52,211,153,.28);
+  }
+  :root[data-theme="dark"] tr.cut-row-selected .row-click-target{
+    background:#059669!important;
+    color:#ecfdf5!important;
+  }
+
+  .lang-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    font-size:17px;
+    line-height:1;
+    filter:saturate(.95);
+  }
+  .language-picker{
+    padding:4px 6px 4px 8px;
+    gap:5px;
+  }
+  .language-picker select{
+    min-width:92px;
+  }
+  :root:not([data-theme="dark"]) .json-btn{
+    background:#ffffff;
+    border-color:#cfd8e3;
+    color:#1f2937;
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 1px 2px rgba(15,23,42,.06);
+  }
+  :root:not([data-theme="dark"]) .json-btn:hover{
+    background:#f8fafc;
+    border-color:#b8c4d2;
+    color:#0f172a;
+    box-shadow:0 8px 18px rgba(15,23,42,.08);
+  }
+  :root:not([data-theme="dark"]) #exportBtn::before{
+    content:"↓ ";
+    color:#15803d;
+    font-weight:1000;
+  }
+  :root:not([data-theme="dark"]) #importBtn::before{
+    content:"↑ ";
+    color:#2563eb;
+    font-weight:1000;
+  }
+
+  /* Dark mode v3: higher contrast, calmer panels, clearer state colors */
+  :root[data-theme="dark"]{
+    --bg:#080d19;
+    --bg2:#0b1220;
+    --panel:#101827;
+    --panel-soft:#162235;
+    --grid:#2a3a52;
+    --grid-strong:#4b617d;
+    --head:#172338;
+    --head2:#0f1a2d;
+    --head-text:#f8fafc;
+    --green:#0f3b2b;
+    --yellow:#423312;
+    --orange:#4a2416;
+    --text:#eef2f7;
+    --muted:#a8b3c4;
+    --accent:#2dd4bf;
+    --danger:#fb7185;
+    --shadow:0 22px 54px rgba(0,0,0,.42);
+  }
+  :root[data-theme="dark"] body{
+    background:
+      radial-gradient(circle at 20% 0%, rgba(45,212,191,.12) 0%, transparent 28%),
+      radial-gradient(circle at 90% 10%, rgba(96,165,250,.10) 0%, transparent 26%),
+      linear-gradient(180deg,#080d19 0%,#0b1220 52%,#0f172a 100%)!important;
+    color:#eef2f7!important;
+  }
+  :root[data-theme="dark"] .topbar{
+    background:rgba(8,13,25,.94)!important;
+    border-bottom:1px solid #26364f!important;
+    box-shadow:0 12px 34px rgba(0,0,0,.38)!important;
+  }
+  :root[data-theme="dark"] .toolbar,
+  :root[data-theme="dark"] .control-panel,
+  :root[data-theme="dark"] .control-group,
+  :root[data-theme="dark"] .wrap,
+  :root[data-theme="dark"] .sheet-layout,
+  :root[data-theme="dark"] .side-progress,
+  :root[data-theme="dark"] .progress-tile,
+  :root[data-theme="dark"] .deadline-panel,
+  :root[data-theme="dark"] .modal,
+  :root[data-theme="dark"] .guide-modal{
+    background:rgba(16,24,39,.96)!important;
+    border-color:#26364f!important;
+    color:#eef2f7!important;
+  }
+  :root[data-theme="dark"] .control-title{
+    background:#0b1220!important;
+    border-color:#26364f!important;
+    color:#8fd9ff!important;
+  }
+  :root[data-theme="dark"] .topbar h1,
+  :root[data-theme="dark"] .guide-modal-head h2{
+    color:#f8fafc!important;
+  }
+  :root[data-theme="dark"] .credit{
+    color:#2dd4bf!important;
+  }
+  :root[data-theme="dark"] .sub,
+  :root[data-theme="dark"] .toolbar label,
+  :root[data-theme="dark"] .control-group label,
+  :root[data-theme="dark"] .card .label,
+  :root[data-theme="dark"] .deadline-title,
+  :root[data-theme="dark"] .deadline-note,
+  :root[data-theme="dark"] .deadline-stage-bottom,
+  :root[data-theme="dark"] .guide-section ul{
+    color:#a8b3c4!important;
+  }
+  :root[data-theme="dark"] input,
+  :root[data-theme="dark"] select,
+  :root[data-theme="dark"] .language-picker{
+    background:#0a1020!important;
+    border-color:#33455f!important;
+    color:#eaf0f8!important;
+  }
+  :root[data-theme="dark"] input:focus,
+  :root[data-theme="dark"] select:focus{
+    outline:2px solid rgba(45,212,191,.45)!important;
+    border-color:#2dd4bf!important;
+  }
+  :root[data-theme="dark"] button,
+  :root[data-theme="dark"] button.utility{
+    background:#172338!important;
+    border-color:#33455f!important;
+    color:#edf2f7!important;
+  }
+  :root[data-theme="dark"] button:hover:not(:disabled){
+    background:#20304b!important;
+    border-color:#5b7597!important;
+  }
+  :root[data-theme="dark"] button.primary{
+    background:#0d9488!important;
+    border-color:#14b8a6!important;
+    color:#ecfeff!important;
+  }
+  :root[data-theme="dark"] button.danger{
+    background:#471824!important;
+    border-color:#be123c!important;
+    color:#ffe4e6!important;
+  }
+  :root[data-theme="dark"] table,
+  :root[data-theme="dark"] .fixed-sheet-head table,
+  :root[data-theme="dark"] tbody tr:nth-child(even),
+  :root[data-theme="dark"] .empty-row{
+    background:#0b1220!important;
+  }
+  :root[data-theme="dark"] th{
+    background:#172338!important;
+    color:#dbeafe!important;
+    border-color:#26364f!important;
+  }
+  :root[data-theme="dark"] th.group{
+    background:#0d2f2a!important;
+    color:#99f6e4!important;
+  }
+  :root[data-theme="dark"] td{
+    background:#0f1a2d;
+    color:#eef2f7;
+    border-color:#26364f!important;
+  }
+  :root[data-theme="dark"] tbody tr:hover td:not(.project-cell):not(.episode-cell){
+    background:#15233a!important;
+  }
+  :root[data-theme="dark"] .project-cell{
+    background:#12302d!important;
+    color:#d1fae5!important;
+  }
+  :root[data-theme="dark"] .episode-cell{
+    background:#172338!important;
+    color:#dbeafe!important;
+  }
+  :root[data-theme="dark"] .row-action-cell,
+  :root[data-theme="dark"] .deadline-metric,
+  :root[data-theme="dark"] .deadline-stage,
+  :root[data-theme="dark"] .guide-section{
+    background:#121d31!important;
+    border-color:#2a3a52!important;
+    color:#eef2f7!important;
+  }
+  :root[data-theme="dark"] .row-click-target{
+    color:#adc3d8!important;
+  }
+  :root[data-theme="dark"] .row-click-target:hover{
+    background:#0d9488!important;
+    color:#ecfeff!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#102f2d!important;
+    box-shadow:inset 0 0 0 2px rgba(45,212,191,.38)!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected .row-click-target{
+    background:#14b8a6!important;
+    color:#082f2a!important;
+  }
+  :root[data-theme="dark"] [contenteditable="true"]:focus{
+    background:#172338!important;
+    outline-color:#2dd4bf!important;
+  }
+  :root[data-theme="dark"] .progress-bar,
+  :root[data-theme="dark"] .deadline-stage-bar{
+    background:#08111f!important;
+  }
+  :root[data-theme="dark"] .daily-focus{
+    background:linear-gradient(135deg,#0f766e 0%,#0d9488 55%,#14b8a6 100%)!important;
+    border-color:#5eead4!important;
+    color:#ecfeff!important;
+  }
+  :root[data-theme="dark"] .daily-focus.warn{
+    background:linear-gradient(135deg,#713f12 0%,#92400e 100%)!important;
+    border-color:#f59e0b!important;
+    color:#fef3c7!important;
+  }
+  :root[data-theme="dark"] .daily-focus.danger{
+    background:linear-gradient(135deg,#881337 0%,#be123c 100%)!important;
+    border-color:#fb7185!important;
+    color:#ffe4e6!important;
+  }
+  :root[data-theme="dark"] .daily-focus.done{
+    background:linear-gradient(135deg,#075985 0%,#0284c7 100%)!important;
+    border-color:#7dd3fc!important;
+    color:#e0f2fe!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-lo td:not(.project-cell):not(.episode-cell){
+    background:#123226!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-progress td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-check td:not(.project-cell):not(.episode-cell){
+    background:#33280f!important;
+  }
+  :root[data-theme="dark"] tr.row-stage-genga td:not(.project-cell):not(.episode-cell),
+  :root[data-theme="dark"] tr.row-stage-nigen td:not(.project-cell):not(.episode-cell){
+    background:#182033!important;
+    color:#b4c0ce!important;
+  }
+  :root[data-theme="dark"] .work-disabled{
+    opacity:.34!important;
+    cursor:not-allowed!important;
+    background:#0b1220!important;
+  }
+  .work-disabled{
+    opacity:.45;
+    cursor:not-allowed!important;
+    background:#f8fafc;
+  }
+
+  /* Dark mode fix: remove white empty table area and force right-progress text readable */
+  :root[data-theme="dark"] .left-table-zone,
+  :root[data-theme="dark"] .table-zone,
+  :root[data-theme="dark"] .work-table-wrap,
+  :root[data-theme="dark"] .work-group,
+  :root[data-theme="dark"] .work-group-body,
+  :root[data-theme="dark"] .sheet-scroll,
+  :root[data-theme="dark"] .table-scroll,
+  :root[data-theme="dark"] .wrap,
+  :root[data-theme="dark"] .sheet-layout{
+    background:#0b1220!important;
+  }
+
+  :root[data-theme="dark"] .left-table-zone::after,
+  :root[data-theme="dark"] .table-zone::after,
+  :root[data-theme="dark"] .work-table-wrap::after{
+    background:#0b1220!important;
+  }
+
+  :root[data-theme="dark"] #tbody{
+    background:#0b1220!important;
+  }
+
+  :root[data-theme="dark"] .side-progress,
+  :root[data-theme="dark"] .side-progress *,
+  :root[data-theme="dark"] .progress-tile,
+  :root[data-theme="dark"] .progress-tile *,
+  :root[data-theme="dark"] .deadline-panel,
+  :root[data-theme="dark"] .deadline-panel *{
+    color:#f8fafc!important;
+  }
+
+  :root[data-theme="dark"] .progress-count,
+  :root[data-theme="dark"] .progress-count small,
+  :root[data-theme="dark"] .progress-percent,
+  :root[data-theme="dark"] .progress-tile-head span{
+    color:#f8fafc!important;
+  }
+
+  :root[data-theme="dark"] .deadline-title,
+  :root[data-theme="dark"] .deadline-note,
+  :root[data-theme="dark"] .deadline-metric .k,
+  :root[data-theme="dark"] .deadline-metric .v,
+  :root[data-theme="dark"] .deadline-stage-name,
+  :root[data-theme="dark"] .deadline-stage-score,
+  :root[data-theme="dark"] .deadline-stage-bottom{
+    color:#f8fafc!important;
+  }
+
+  :root[data-theme="dark"] .deadline-stage-daily{
+    background:#123524!important;
+    color:#d1fae5!important;
+  }
+
+  :root[data-theme="dark"] .daily-focus,
+  :root[data-theme="dark"] .daily-focus *{
+    color:#ecfeff!important;
+  }
+
+  :root[data-theme="dark"] .daily-focus.warn,
+  :root[data-theme="dark"] .daily-focus.warn *{
+    color:#fef3c7!important;
+  }
+
+  :root[data-theme="dark"] .daily-focus.danger,
+  :root[data-theme="dark"] .daily-focus.danger *{
+    color:#ffe4e6!important;
+  }
+
+  :root[data-theme="dark"] .daily-focus.done,
+  :root[data-theme="dark"] .daily-focus.done *{
+    color:#e0f2fe!important;
+  }
+
+  /* Dark mode fix: status popup menu border/background */
+  :root[data-theme="dark"] .stage-menu{
+    background:#101827!important;
+    border:1px solid #2dd4bf!important;
+    box-shadow:0 18px 42px rgba(0,0,0,.52), 0 0 0 1px rgba(45,212,191,.18)!important;
+  }
+
+  :root[data-theme="dark"] .stage-menu button{
+    background:#142238!important;
+    color:#f8fafc!important;
+    border-color:transparent!important;
+  }
+
+  :root[data-theme="dark"] .stage-menu button:hover{
+    background:#1e3350!important;
+    color:#ffffff!important;
+  }
+
+  :root[data-theme="dark"] .stage-menu .stage-icon.progress{
+    color:#fb923c!important;
+  }
+
+  :root[data-theme="dark"] .stage-menu .stage-icon.done{
+    color:#60a5fa!important;
+  }
+
+  :root[data-theme="dark"] .stage-menu .stage-icon.empty{
+    color:#94a3b8!important;
+  }
+
+  /* Simple guide layout */
+  .guide-modal{
+    width:min(720px, 100%);
+  }
+  .guide-modal-body{
+    gap:10px;
+  }
+  .guide-section{
+    padding:12px 14px;
+  }
+  .guide-section h3{
+    font-size:15px;
+    margin-bottom:7px;
+  }
+  .guide-section ul{
+    font-size:13px;
+    line-height:1.5;
+  }
+  .guide-section li + li{
+    margin-top:2px;
+  }
+
+  /* Lightweight rendering hints */
+  .work-group,
+  .progress-tile,
+  .deadline-panel,
+  .guide-section{
+    contain:layout paint;
+  }
+  .sheet-layout{
+    contain:layout;
+  }
+
+  .deadline-context{
+    margin-top:6px;
+    padding:6px 9px;
+    border-radius:9px;
+    background:#f3f6fb;
+    border:1px solid #e5ebf2;
+    color:#475467;
+    font-size:13px;
+    font-weight:900;
+  }
+  .metric-mini{
+    margin-top:5px;
+    font-size:12px;
+    font-weight:900;
+    color:#166534;
+  }
+  .stage-split-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  :root[data-theme="dark"] .deadline-context{
+    background:#121d31!important;
+    border-color:#2a3a52!important;
+    color:#dbe7f4!important;
+  }
+  :root[data-theme="dark"] .metric-mini{
+    color:#86efac!important;
+  }
+
+  .daily-main{
+    min-width:0;
+  }
+  .daily-split{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+  }
+  .daily-split-item{
+    display:inline-grid;
+    grid-template-columns:auto auto auto;
+    align-items:baseline;
+    gap:5px;
+    padding:6px 9px;
+    border-radius:999px;
+    background:rgba(255,255,255,.45);
+    border:1px solid rgba(20,83,45,.16);
+    font-weight:950;
+  }
+  .daily-split-item span{
+    font-size:12px;
+    letter-spacing:.04em;
+  }
+  .daily-split-item strong{
+    font-size:18px;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .daily-split-item em{
+    font-style:normal;
+    font-size:11px;
+    opacity:.82;
+  }
+  :root[data-theme="dark"] .daily-split-item{
+    background:rgba(8,47,73,.28)!important;
+    border-color:rgba(236,254,255,.22)!important;
+  }
+  :root[data-theme="dark"] .daily-split-item,
+  :root[data-theme="dark"] .daily-split-item *{
+    color:#ecfeff!important;
+  }
+  :root[data-theme="dark"] .daily-focus.warn .daily-split-item,
+  :root[data-theme="dark"] .daily-focus.warn .daily-split-item *{
+    color:#fef3c7!important;
+  }
+  :root[data-theme="dark"] .daily-focus.danger .daily-split-item,
+  :root[data-theme="dark"] .daily-focus.danger .daily-split-item *{
+    color:#ffe4e6!important;
+  }
+  @media (max-width:720px){
+    .daily-split{
+      gap:6px;
+    }
+    .daily-split-item{
+      grid-template-columns:auto auto;
+    }
+    .daily-split-item em{
+      grid-column:1 / span 2;
+    }
+  }
+
+  .daily-focus-independent{
+    grid-template-columns:1fr;
+  }
+  .daily-independent-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+  .daily-independent-card{
+    min-width:0;
+    border-radius:16px;
+    padding:12px 13px;
+    background:rgba(255,255,255,.48);
+    border:1px solid rgba(20,83,45,.16);
+    display:grid;
+    gap:4px;
+  }
+  .daily-independent-card span{
+    font-size:13px;
+    font-weight:1000;
+    letter-spacing:.08em;
+  }
+  .daily-independent-card strong{
+    font-size:42px;
+    line-height:.95;
+    font-weight:1000;
+    font-variant-numeric:tabular-nums;
+  }
+  .daily-independent-card em{
+    font-style:normal;
+    font-size:12px;
+    font-weight:950;
+  }
+  .daily-independent-card small{
+    font-size:12px;
+    font-weight:850;
+    opacity:.88;
+  }
+  .split-target-value{
+    font-size:20px!important;
+    line-height:1.15!important;
+    word-break:keep-all;
+  }
+
+  :root[data-theme="dark"] .daily-independent-card{
+    background:rgba(8,47,73,.28)!important;
+    border-color:rgba(236,254,255,.22)!important;
+  }
+  :root[data-theme="dark"] .daily-independent-card,
+  :root[data-theme="dark"] .daily-independent-card *{
+    color:#ecfeff!important;
+  }
+  :root[data-theme="dark"] .daily-focus.warn .daily-independent-card,
+  :root[data-theme="dark"] .daily-focus.warn .daily-independent-card *{
+    color:#fef3c7!important;
+  }
+  :root[data-theme="dark"] .daily-focus.danger .daily-independent-card,
+  :root[data-theme="dark"] .daily-focus.danger .daily-independent-card *{
+    color:#ffe4e6!important;
+  }
+  @media (max-width:720px){
+    .daily-independent-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  /* Split deadline calendar + scroll clipping fix */
+  .split-deadline-line{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:flex-end;
+    text-align:right;
+    font-size:12px;
+    line-height:1.35;
+  }
+  .split-deadline-line b{
+    color:inherit;
+    font-weight:1000;
+  }
+  .daily-independent-card .deadline-mini{
+    font-size:12px;
+    font-weight:900;
+    opacity:.9;
+  }
+
+  .wrap{
+    overflow:hidden;
+  }
+  .sheet-layout{
+    min-height:0;
+    overflow:hidden;
+  }
+  .table-zone,
+  .left-table-zone{
+    min-height:0;
+    overflow:auto;
+  }
+  .side-progress{
+    min-height:0;
+    overflow:auto;
+    scrollbar-gutter:stable;
+    padding-bottom:18px;
+  }
+  .deadline-panel{
+    margin-bottom:12px;
+  }
+  @supports (height: 100dvh){
+    .app{
+      height:100dvh;
+    }
+  }
+  @media (max-height:760px){
+    .topbar{padding:8px 12px}
+    .toolbar{padding:6px 8px}
+    .control-group{padding:6px 8px}
+    .progress-tile{padding:8px 10px; min-height:48px}
+    .daily-independent-card strong{font-size:34px}
+  }
+
+  .progress-tile-numeric{
+    min-height:58px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:center;
+    gap:8px;
+  }
+  .progress-tile-numeric .progress-tile-head{
+    display:block;
+  }
+  .progress-tile-numeric .progress-count{
+    margin:0;
+    text-align:right;
+    white-space:nowrap;
+  }
+  .progress-tile-numeric .progress-count.numeric-only{
+    font-size:32px;
+  }
+  .progress-tile-numeric .progress-count small{
+    font-size:13px;
+  }
+  .progress-tile-numeric .progress-bar,
+  .progress-tile-numeric .progress-percent{
+    display:none!important;
+  }
+  @media (max-width:720px){
+    .progress-tile-numeric .progress-count.numeric-only{
+      font-size:26px;
+    }
+  }
+
+  .daily-independent-card{
+    align-content:center;
+  }
+
+  tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#e8fff0!important;
+    box-shadow:inset 0 0 0 2px rgba(34,197,94,.28);
+  }
+  tr.cut-row-selected .row-click-target{
+    background:#16a34a;
+    color:#ffffff;
+  }
+  .selected-range{
+    background:#dcfce7!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#123524!important;
+    box-shadow:inset 0 0 0 2px rgba(45,212,191,.34)!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected .row-click-target{
+    background:#14b8a6!important;
+    color:#082f2a!important;
+  }
+  :root[data-theme="dark"] .selected-range{
+    background:#123524!important;
+  }
+
+  /* Selection simplification: color only, no thick borders */
+  td.selected-cell{
+    background:#dff8e8!important;
+    outline:none!important;
+    box-shadow:none!important;
+    position:relative;
+    z-index:auto!important;
+  }
+  td.selected-range,
+  td.selected-range.range-edge-top,
+  td.selected-range.range-edge-bottom,
+  td.selected-range.range-edge-left,
+  td.selected-range.range-edge-right{
+    background:#dff8e8!important;
+    border-color:var(--grid)!important;
+    box-shadow:none!important;
+    outline:none!important;
+  }
+  td[contenteditable="true"]:focus{
+    outline:none!important;
+    box-shadow:inset 0 0 0 1px rgba(22,163,74,.28)!important;
+    background:#eefbf3!important;
+  }
+  tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#dff8e8!important;
+    box-shadow:none!important;
+  }
+  tr.cut-row-selected .row-click-target{
+    background:#16a34a;
+    color:#ffffff;
+  }
+  :root[data-theme="dark"] td.selected-cell{
+    background:#123524!important;
+    outline:none!important;
+    box-shadow:none!important;
+  }
+  :root[data-theme="dark"] td[contenteditable="true"]:focus{
+    outline:none!important;
+    box-shadow:inset 0 0 0 1px rgba(45,212,191,.28)!important;
+    background:#15342d!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#123524!important;
+    box-shadow:none!important;
+  }
+
+  /* True single-row selection: one row only, soft color, no thick cell borders */
+  td.selected-cell{
+    background:transparent!important;
+    outline:none!important;
+    box-shadow:none!important;
+  }
+  tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#e8f7ee!important;
+    box-shadow:none!important;
+  }
+  tr.cut-row-selected .row-click-target{
+    background:#16a34a!important;
+    color:#ffffff!important;
+  }
+  td[contenteditable="true"]:focus{
+    outline:none!important;
+    box-shadow:inset 0 0 0 1px rgba(22,163,74,.18)!important;
+    background:#eefbf3!important;
+  }
+  :root[data-theme="dark"] td.selected-cell{
+    background:transparent!important;
+    outline:none!important;
+    box-shadow:none!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#123524!important;
+    box-shadow:none!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected .row-click-target{
+    background:#14b8a6!important;
+    color:#082f2a!important;
+  }
+  :root[data-theme="dark"] td[contenteditable="true"]:focus{
+    outline:none!important;
+    box-shadow:inset 0 0 0 1px rgba(45,212,191,.18)!important;
+    background:#15342d!important;
+  }
+
+  /* Shift row range selection: multiple rows by color only */
+  td.selected-cell{
+    background:transparent!important;
+    outline:none!important;
+    box-shadow:none!important;
+  }
+  tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#e4f8ec!important;
+    box-shadow:none!important;
+  }
+  tr.cut-row-selected .row-click-target{
+    background:#16a34a!important;
+    color:#ffffff!important;
+  }
+  td[contenteditable="true"]:focus{
+    outline:none!important;
+    box-shadow:inset 0 0 0 1px rgba(22,163,74,.16)!important;
+    background:#eefbf3!important;
+  }
+  :root[data-theme="dark"] td.selected-cell{
+    background:transparent!important;
+    outline:none!important;
+    box-shadow:none!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected td:not(.project-cell):not(.episode-cell){
+    background:#123524!important;
+    box-shadow:none!important;
+  }
+  :root[data-theme="dark"] tr.cut-row-selected .row-click-target{
+    background:#14b8a6!important;
+    color:#082f2a!important;
+  }
+
+  /* Low-spec performance mode: reduce paint/compositing cost */
+  *, *::before, *::after{
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
+  :root{
+    --shadow:none!important;
+  }
+  body,
+  .topbar,
+  .toolbar,
+  .control-group,
+  .wrap,
+  .side-progress,
+  .progress-tile,
+  .deadline-panel,
+  .deadline-metric,
+  .daily-focus,
+  .daily-independent-card,
+  .guide-modal,
+  .modal{
+    box-shadow:none!important;
+  }
+  button:hover{
+    transform:none!important;
+    box-shadow:none!important;
+  }
+  .toolbar,
+  .guide-modal-bg{
+    backdrop-filter:none!important;
+  }
+  .row-click-target:hover{
+    transform:none!important;
+  }
+  .work-group,
+  .work-table-wrap,
+  .fixed-sheet-head,
+  .side-progress,
+  .deadline-panel,
+  .progress-tile{
+    contain:layout paint style;
+  }
+  .sheet-layout,
+  .left-table-zone,
+  .table-zone{
+    contain:layout paint;
+  }
+
+  /* Inline side guide */
+  .side-guide{
+    grid-column:1 / -1;
+    border:1px solid #d9e1ea;
+    border-radius:12px;
+    background:#ffffff;
+    padding:10px;
+  }
+  .side-guide-title{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:32px;
+    border-radius:9px;
+    background:#eef2f7;
+    color:#334155;
+    font-size:14px;
+    font-weight:1000;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+  .side-guide-content{
+    display:grid;
+    gap:7px;
+  }
+  .side-guide-section{
+    border:1px solid #edf1f5;
+    border-radius:10px;
+    background:#fbfcfe;
+    padding:8px 9px;
+  }
+  .side-guide-section h4{
+    margin:0 0 4px;
+    font-size:13px;
+    font-weight:1000;
+    color:#166534;
+  }
+  .side-guide-section ul{
+    margin:0;
+    padding-left:16px;
+    font-size:12px;
+    line-height:1.45;
+    color:#475467;
+    font-weight:760;
+  }
+  .side-guide-section li + li{
+    margin-top:2px;
+  }
+  :root[data-theme="dark"] .side-guide{
+    background:#101827!important;
+    border-color:#26364f!important;
+  }
+  :root[data-theme="dark"] .side-guide-title{
+    background:#172338!important;
+    color:#f8fafc!important;
+  }
+  :root[data-theme="dark"] .side-guide-section{
+    background:#121d31!important;
+    border-color:#2a3a52!important;
+  }
+  :root[data-theme="dark"] .side-guide-section h4{
+    color:#86efac!important;
+  }
+  :root[data-theme="dark"] .side-guide-section ul{
+    color:#dbe7f4!important;
+  }
+
+  .progress-gauge{
+    margin-top:9px;
+    height:7px;
+    border-radius:999px;
+    background:rgba(15,23,42,.12);
+    overflow:hidden;
+  }
+  .progress-gauge span{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background:currentColor;
+    opacity:.82;
+  }
+  :root[data-theme="dark"] .progress-gauge{
+    background:rgba(255,255,255,.14);
+  }
+
+  /* Visible gauge inside each progress card */
+  .progress-tile{
+    position:relative;
+    padding-bottom:26px!important;
+  }
+  .progress-gauge{
+    position:absolute;
+    left:14px;
+    right:14px;
+    bottom:10px;
+    height:8px;
+    border-radius:999px;
+    background:rgba(15,23,42,.18);
+    overflow:hidden;
+  }
+  .progress-gauge span{
+    display:block;
+    height:100%;
+    border-radius:999px;
+    background:currentColor;
+    opacity:.9;
+  }
+  :root[data-theme="dark"] .progress-gauge{
+    background:rgba(255,255,255,.18);
+  }
+
+  /* Gauge no-overlap fix */
+  .progress-tile.progress-tile-numeric{
+    min-height:96px!important;
+    padding-bottom:12px!important;
+    display:flex;
+    flex-direction:column;
+  }
+  .progress-tile.progress-tile-numeric .progress-count{
+    margin-top:4px;
+  }
+  .progress-tile.progress-tile-numeric .progress-gauge{
+    position:static!important;
+    left:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    width:100%;
+    margin-top:auto!important;
+    height:7px;
+    flex:0 0 7px;
+  }
+
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1 data-i18n="appTitle">애니메이터 스케줄 보드</h1>
+      <div class="credit" data-i18n="credit">제작 - 미야소</div>
+      <div class="subtitle" data-i18n="appSubtitle">스프레드시트형 제작 스케줄 관리</div>
+    </div>
+    <div class="right">
+      <label class="language-picker" title="Language">
+        <span class="lang-icon" aria-hidden="true">🌐</span>
+        <select id="languageSelect" aria-label="Language">
+          <option value="ko">한국어</option>
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <button id="undoBtn" class="utility" data-i18n="undo" title="Ctrl+Z" disabled>되돌리기</button>
+      <button id="themeToggleBtn" class="utility" data-i18n="darkMode">다크모드</button>
+      <button id="guideToggleBtn" class="utility" data-i18n="guide">설명서</button>
+      <button id="exportBtn" class="json-btn" data-i18n="exportJson">JSON 내보내기</button>
+      <button id="importBtn" class="json-btn" data-i18n="importJson">JSON 가져오기</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="toolbar">
+    <label><span data-i18n="projectSelect">작품 선택</span> <select id="projectSelect"></select></label>
+    <label><span data-i18n="episodeSelect">화수 선택</span> <select id="episodeSelect"></select></label>
+    <label><span data-i18n="workName">작품명</span> <input id="projectName" value=""></label>
+    <label><span data-i18n="episodeNo">화수</span> <input class="small" id="episodeNo" value="6"></label>
+    <label><span data-i18n="loDeadline">LO 마감</span> <input id="loDeadlineDate" type="date"></label>
+    <label><span data-i18n="gengaDeadline">원화 마감</span> <input id="gengaDeadlineDate" type="date"></label>
+    <label><span data-i18n="filter">필터</span> <input id="filterInput" data-i18n-placeholder="cutSearch" placeholder="CUT 검색"></label>
+    <span class="spacer"></span>
+    <span class="hint" data-i18n="hint">작품명/화수는 상단에서만 수정 / 셀 선택 후 바로 입력</span>
+  </section>
+
+  <section class="control-panel">
+    <div class="control-group">
+      <div class="control-title" data-i18n="workEpisode">작품 / 화수</div>
+      <button class="primary" id="addWorkBtn" data-i18n="addWork">작품 추가</button>
+      <button class="primary" id="addEpisodeBtn" data-i18n="addEpisode">화수 추가</button>
+      <button class="danger" id="removeWorkBtn" data-i18n="removeWork">작품 제거</button>
+      <button class="danger" id="removeEpisodeBtn" data-i18n="removeEpisode">화수 제거</button>
+    </div>
+    <div class="control-group">
+      <div class="control-title" data-i18n="cut">CUT</div>
+      <button class="primary" id="addCutBtn" data-i18n="addCut">컷 추가</button>
+      <button class="danger" id="removeCutBtn" data-i18n="removeSelectedCut">선택 컷 제거</button>
+      <label><span data-i18n="cutCount">CUT 수</span> <input class="tiny" id="bulkCutCount" type="number" min="1" value="10"></label>
+      <button id="addManyBtn" data-i18n="cutPlus">CUT+</button>
+      <button class="danger" id="removeManyBtn" data-i18n="cutMinus">CUT-</button>
+    </div>
+    <div class="control-group danger-zone">
+      <div class="control-title" data-i18n="manage">관리</div>
+      <button class="danger" id="resetBtn" data-i18n="resetAll">전체 초기화</button>
+    </div>
+  </section>
+
+
+  <div class="wrap">
+
+    <div class="sheet-layout">
+      <div class="table-zone left-table-zone">
+        <div class="fixed-sheet-head">
+          <table>
+            <colgroup>
+              <col style="width:24%">
+              <col style="width:11%">
+              <col style="width:6%">
+              <col style="width:13%">
+              <col style="width:13%">
+              <col style="width:11%">
+              <col style="width:11%">
+              <col style="width:11%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th colspan="3"></th>
+                <th colspan="2" class="group" data-i18n="assigned">담당</th>
+                <th colspan="3" class="group" data-i18n="work">작업</th>
+              </tr>
+              <tr>
+                <th class="thick-left" data-i18n="workName">작품명</th>
+                <th data-i18n="episodeNo">화수</th>
+                <th data-i18n="rowAction">행</th>
+                <th data-i18n="cut">CUT</th>
+                <th class="thick-right" data-i18n="time">TIME</th>
+                <th>LO</th>
+                <th data-i18n="retake">수정</th>
+                <th class="thick-right" data-i18n="genga">원화</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <div id="tbody" class="sheet-body"></div>
+      </div>
+      <aside class="side-progress" id="progressBoard"></aside>
+    </div>
+    <div class="footnote" data-i18n="footnote">데이터는 브라우저에 자동 저장됩니다. JSON 내보내기로 백업할 수 있습니다.</div>
+  </div>
+</div>
+
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 data-i18n="addCut">컷 추가</h2>
+    <div class="form-grid">
+      <label><span data-i18n="cut">CUT</span> <input id="newCut" placeholder="142"></label>
+      <label><span data-i18n="time">TIME</span> <input id="newTime" placeholder="4+6"></label>
+    </div>
+    <div class="modal-actions">
+      <button id="cancelModal" data-i18n="cancel">취소</button>
+      <button class="primary" id="saveNewCut" data-i18n="add">추가</button>
+    </div>
+  </div>
+</div>
+
+<div id="stageMenu" class="stage-menu" hidden>
+  <button type="button" data-stage-choice="progress"><span class="menu-symbol progress">▲</span><span data-i18n="stageProgress">진행중</span></button>
+  <button type="button" data-stage-choice="done"><span class="menu-symbol done">○</span><span data-i18n="stageDone">완료</span></button>
+  <button type="button" data-stage-choice="nigen" class="nigen-option"><span class="menu-symbol nigen">二原</span><span>二原</span></button>
+  <button type="button" data-stage-choice=""><span class="menu-symbol clear">×</span><span data-i18n="stageClear">비움</span></button>
+</div>
+
+<input id="fileInput" type="file" accept="application/json" hidden>
+
+<script>
+const STORAGE_KEY = "animator_schedule_board_public_empty_v1";
+const OLD_STORAGE_KEY = "animator_schedule_board_mvp_v1";
+
+const LANG_STORAGE_KEY = "animator_schedule_ui_language_public_v1";
+const I18N = {
+  ko:{
+    appTitle:"애니메이터 스케줄 보드",
+    appSubtitle:"스프레드시트형 제작 스케줄 관리",
+    credit:"제작 - 미야소",
+    language:"언어",
+    exportJson:"JSON 내보내기",
+    importJson:"JSON 가져오기",
+    projectSelect:"작품 선택",
+    episodeSelect:"화수 선택",
+    workName:"작품명",
+    episodeNo:"화수",
+    episodeSuffix:"화",
+    deadline:"마감",
+    loDeadline:"LO 마감",
+    gengaDeadline:"원화 마감",
+    deadlineUnset:"마감 미설정",
+    deadlineFor:"마감",
+    filter:"필터",
+    cutSearch:"CUT 검색",
+    cut:"CUT",
+    time:"TIME",
+    cutPlus:"CUT+",
+    cutMinus:"CUT-",
+    hint:"방향키로 칸 이동 / 셀 선택 후 바로 입력 / 작품명·화수는 상단에서만 수정",
+    workEpisode:"작품 / 화수",
+    addWork:"작품 추가",
+    addEpisode:"화수 추가",
+    removeWork:"작품 제거",
+    removeEpisode:"화수 제거",
+    addCut:"컷 추가",
+    removeSelectedCut:"선택 컷 제거",
+    cutCount:"CUT 수",
+    manage:"관리",
+    resetAll:"전체 초기화",
+    rowAction:"행",
+    clickCutRowHelp:"클릭: 행 선택 / Shift+클릭: 범위 선택 / Alt+클릭: 이동 / 더블클릭: 아래 추가",
+    cutClickGuide:"행 번호 클릭으로 선택합니다. Shift+클릭으로 여러 행을 범위 선택하고, 선택 컷 제거로 한꺼번에 삭제할 수 있습니다. Alt+클릭은 이동, 더블클릭은 아래 추가입니다.",
+    insertCutBelow:"아래에 CUT 추가",
+    dragCut:"드래그해서 CUT 이동",
+    cutReorderGuide:"행 칸의 + 버튼으로 아래에 CUT을 추가하고, ↕ 버튼을 드래그해서 CUT 순서를 바꿉니다.",
+    undo:"되돌리기",
+    darkMode:"다크모드",
+    lightMode:"라이트모드",
+    guide:"설명서",
+    closeGuide:"닫기",
+    guideTitle:"기능 설명서",
+    guideCard1Title:"1. 기본 입력",
+    guideCard1Body:"작품명, 화수, 마감일을 위에서 입력하고 CUT/TIME은 표에서 바로 입력합니다.",
+    guideCard2Title:"2. 상태 체크",
+    guideCard2Body:"LO와 원화는 클릭으로 진행중/완료를 바꾸고, 체크 칸은 클릭하면 반영됩니다.",
+    guideCard3Title:"3. 마감 계산",
+    guideCard3Body:"마감일을 넣으면 오늘 포함 남은 기간 기준으로 하루에 필요한 CUT 수를 계산합니다.",
+    guideCard4Title:"4. 백업",
+    guideCard4Body:"데이터는 브라우저에 저장되며, JSON 내보내기/가져오기로 백업하거나 이동합니다.",
+    todayNeed:"오늘 필요한 작업",
+    workDays:"작업일",
+    remainingWork:"남은 작업",
+    dailyTargetHint:"하루 목표",
+    noDeadlineDaily:"마감일을 넣으면 하루 목표가 표시됩니다.",
+    assigned:"담당",
+    work:"작업",
+    progress:"진척",
+    retake:"체크",
+    genga:"원화",
+    complete:"완료",
+    totalCut:"총 CUT",
+    totalTime:"총 TIME",
+    deadlineCalc:"마감 계산",
+    dDay:"마감까지",
+    remainingCuts:"남은 작업",
+    unset:"미설정",
+    cutLeft:"컷 남음",
+    cutsPerDay:"컷/일",
+    workPerDay:"작업/일",
+    deadlineBasis:"LO와 원화 잔여 작업 기준",
+    completeText:"complete",
+    episodesCount:"개 화수",
+    workNameMerged:"작품명 칸 병합",
+    emptyEpisode:"이 화수에 표시할 CUT이 없습니다.",
+    noDeadlineStatus:"마감 날짜를 입력하면 LO / 원화 기준 하루 필요 작업량을 계산합니다.",
+    allDone:"모든 할당 컷 완료",
+    deadlinePassed:"마감일이 지났거나 오늘입니다",
+    daysPlan:(days,daily)=>`오늘 포함 ${days}일 동안 하루 ${daily}작업 필요`,
+    footnote:"데이터는 브라우저에 자동 저장됩니다. JSON 내보내기로 백업할 수 있습니다.",
+    cancel:"취소",
+    add:"추가",
+    promptNewWork:"새 작품명을 입력해주세요.",
+    promptFirstEpisode:"첫 화수를 입력해주세요.",
+    promptAddEpisode:(name)=>`${name || "Untitled"}에 추가할 화수를 입력해주세요.`,
+    alertMinWork:"작품은 최소 1개가 필요합니다.",
+    alertMinEpisode:"화수는 최소 1개가 필요합니다.",
+    confirmRemoveWork:(name,count)=>`"${name}" 작품 전체를 삭제할까요?\n포함된 화수 ${count}개가 모두 삭제됩니다.`,
+    confirmRemoveEpisode:(label)=>`${label} 화수를 삭제할까요?`,
+    alertNoCutRows:"제거할 CUT 행이 없습니다.",
+    confirmRemoveBulk:(count)=>`마지막 ${count}개 행 안에 입력된 내용이 있습니다. 그래도 제거할까요?`,
+    confirmReset:"모든 작품/화수/CUT 입력 내용을 초기화할까요? 이 작업은 되돌릴 수 없습니다.",
+    importFail:"가져오기 실패: JSON 형식이 맞는지 확인해주세요.",
+    alertSelectCut:"먼저 제거할 컷 행을 클릭해서 선택해주세요.",
+    emptyRowLabel:(n)=>`${n}번째 빈 행`,
+    confirmRemoveCut:(label)=>`${label}을/를 제거할까요?`,
+    clickLo:"LO: 진행중(노란 세모) → 완료(파란 동그라미) → 비움",
+    clickRetake:"클릭해서 체크 표시",
+    clickGenga:"원화: 진행중(노란 세모) → 완료(파란 동그라미) → 二原(검정) → 비움",
+    stageProgress:"진행중",
+    stageDone:"완료",
+    stageClear:"비움",
+    collapse:"접기",
+    expand:"펼치기",
+    collapsed:"접힘",
+    hiddenCuts:(n)=>`${n} CUT 숨김`,
+    dragWork:"드래그해서 작품 순서 변경"
+  },
+  ja:{
+    appTitle:"アニメーター進行ボード",
+    appSubtitle:"スプレッドシート型制作スケジュール管理",
+    credit:"制作 - みやそ",
+    language:"言語",
+    exportJson:"JSON書き出し",
+    importJson:"JSON読み込み",
+    projectSelect:"作品選択",
+    episodeSelect:"話数選択",
+    workName:"作品名",
+    episodeNo:"話数",
+    episodeSuffix:"話",
+    deadline:"締切",
+    loDeadline:"LO締切",
+    gengaDeadline:"原画締切",
+    deadlineUnset:"締切未設定",
+    deadlineFor:"締切",
+    filter:"フィルター",
+    cutSearch:"カット検索",
+    cut:"カット",
+    time:"尺",
+    cutPlus:"カット+",
+    cutMinus:"カット-",
+    hint:"方向キーでセル移動 / セル選択後そのまま入力 / 作品名・話数は上部のみで修正",
+    workEpisode:"作品 / 話数",
+    addWork:"作品追加",
+    addEpisode:"話数追加",
+    removeWork:"作品削除",
+    removeEpisode:"話数削除",
+    addCut:"カット追加",
+    removeSelectedCut:"カット削除",
+    cutCount:"カット数",
+    manage:"管理",
+    resetAll:"全体初期化",
+    rowAction:"行",
+    clickCutRowHelp:"クリック: 行選択 / Shift+クリック: 範囲選択 / Alt+クリック: 移動 / ダブルクリック: 下に追加",
+    cutClickGuide:"行番号クリックで選択します。Shift+クリックで複数行を範囲選択し、選択カット削除でまとめて削除できます。Altクリックは移動、ダブルクリックは下に追加です。",
+    insertCutBelow:"下にカット追加",
+    dragCut:"ドラッグしてカット移動",
+    cutReorderGuide:"行欄の＋ボタンで下にカットを追加し、↕ボタンをドラッグしてカット順を変更します。",
+    undo:"元に戻す",
+    darkMode:"ダークモード",
+    lightMode:"ライトモード",
+    guide:"説明書",
+    closeGuide:"閉じる",
+    guideTitle:"機能説明書",
+    guideCard1Title:"1. 基本入力",
+    guideCard1Body:"作品名、話数、締切日は上部で入力し、カットと尺は表に直接入力します。",
+    guideCard2Title:"2. ステータス確認",
+    guideCard2Body:"LOと原画はクリックで進行中/完了を切り替え、戻し欄もクリックで反映されます。",
+    guideCard3Title:"3. 締切計算",
+    guideCard3Body:"締切日を入れると、本日を含めた残り日数から1日に必要なカット数を計算します。",
+    guideCard4Title:"4. バックアップ",
+    guideCard4Body:"データはブラウザに保存され、JSON書き出し/読み込みでバックアップや移動ができます。",
+    todayNeed:"今日必要な作業",
+    workDays:"作業日",
+    remainingWork:"残り作業",
+    dailyTargetHint:"1日目標",
+    noDeadlineDaily:"締切日を入れると1日目標が表示されます。",
+    assigned:"担当",
+    work:"作業",
+    progress:"進捗",
+    retake:"戻し",
+    genga:"原画",
+    complete:"完了",
+    totalCut:"総カット",
+    totalTime:"総尺",
+    deadlineCalc:"締切計算",
+    dDay:"締切まで",
+    remainingCuts:"残り作業",
+    unset:"未設定",
+    cutLeft:"CUT残り",
+    cutsPerDay:"CUT/日",
+    workPerDay:"作業/日",
+    deadlineBasis:"LOと原画の残り作業基準",
+    completeText:"complete",
+    episodesCount:"話数",
+    workNameMerged:"作品名セル結合",
+    emptyEpisode:"この話数に表示するカットがありません。",
+    noDeadlineStatus:"締切日を入力すると、LO / 原画基準の1日必要作業量を計算します。",
+    allDone:"全割当カット完了",
+    deadlinePassed:"締切日が過ぎているか本日です",
+    daysPlan:(days,daily)=>`本日含め${days}日で、1日${daily}作業必要`,
+    footnote:"データはブラウザに自動保存されます。JSON書き出しでバックアップできます。",
+    cancel:"キャンセル",
+    add:"追加",
+    promptNewWork:"新しい作品名を入力してください。",
+    promptFirstEpisode:"最初の話数を入力してください。",
+    promptAddEpisode:(name)=>`${name || "Untitled"}に追加する話数を入力してください。`,
+    alertMinWork:"作品は最低1つ必要です。",
+    alertMinEpisode:"話数は最低1つ必要です。",
+    confirmRemoveWork:(name,count)=>`「${name}」作品全体を削除しますか？\n含まれる話数${count}件がすべて削除されます。`,
+    confirmRemoveEpisode:(label)=>`${label}を削除しますか？`,
+    alertNoCutRows:"削除するカット行がありません。",
+    confirmRemoveBulk:(count)=>`最後の${count}行に入力済みの内容があります。それでも削除しますか？`,
+    confirmReset:"すべての作品/話数/CUT入力内容を初期化しますか？この操作は元に戻せません。",
+    importFail:"読み込み失敗：JSON形式を確認してください。",
+    alertSelectCut:"先に削除するカット行をクリックして選択してください。",
+    emptyRowLabel:(n)=>`${n}番目の空行`,
+    confirmRemoveCut:(label)=>`${label}を削除しますか？`,
+    clickLo:"LO：進行中(黄色三角) → 完了(青丸) → 空欄",
+    clickRetake:"クリックして戻しチェック",
+    clickGenga:"原画：進行中(黄色三角) → 完了(青丸) → 二原(黒) → 空欄",
+    stageProgress:"進行中",
+    stageDone:"完了",
+    stageClear:"空欄",
+    collapse:"折りたたむ",
+    expand:"開く",
+    collapsed:"折りたたみ",
+    hiddenCuts:(n)=>`${n}カット非表示`,
+    dragWork:"ドラッグして作品順を変更"
+  },
+  en:{
+    appTitle:"Animator Schedule Board",
+    appSubtitle:"Spreadsheet-style production schedule tracker",
+    credit:"Created by - Miyaso",
+    language:"Language",
+    exportJson:"Export JSON",
+    importJson:"Import JSON",
+    projectSelect:"Project select",
+    episodeSelect:"Episode select",
+    workName:"Project",
+    episodeNo:"Episode",
+    episodeSuffix:"EP",
+    deadline:"Deadline",
+    loDeadline:"LO deadline",
+    gengaDeadline:"Genga deadline",
+    deadlineUnset:"No deadline",
+    deadlineFor:"Deadline",
+    filter:"Filter",
+    cutSearch:"Search CUT",
+    cut:"CUT",
+    time:"TIME",
+    cutPlus:"CUT+",
+    cutMinus:"CUT-",
+    hint:"Move with arrow keys / Select a cell and type / Edit project・episode only at the top",
+    workEpisode:"Project / Episode",
+    addWork:"Add project",
+    addEpisode:"Add episode",
+    removeWork:"Remove project",
+    removeEpisode:"Remove episode",
+    addCut:"Add cut",
+    removeSelectedCut:"Remove selected cut",
+    cutCount:"CUT count",
+    manage:"Manage",
+    resetAll:"Reset all",
+    rowAction:"Row",
+    clickCutRowHelp:"Click: select row / Shift-click: range / Alt-click: move / double-click: add below",
+    cutClickGuide:"Click a row number to select. Shift-click selects a range, and Remove selected CUT deletes them together. Alt-click moves, double-click adds below.",
+    insertCutBelow:"Insert CUT below",
+    dragCut:"Drag to move CUT",
+    cutReorderGuide:"Use + in the Row column to insert a CUT below, and drag ↕ to reorder CUT rows.",
+    undo:"Undo",
+    darkMode:"Dark mode",
+    lightMode:"Light mode",
+    guide:"Guide",
+    closeGuide:"Close",
+    guideTitle:"Feature guide",
+    guideCard1Title:"1. Basic input",
+    guideCard1Body:"Enter project, episode, and deadline above. Enter CUT/TIME directly in the table.",
+    guideCard2Title:"2. Status check",
+    guideCard2Body:"Click LO/genga to switch progress/done. Click Check to update it immediately.",
+    guideCard3Title:"3. Deadline plan",
+    guideCard3Body:"Set a deadline to calculate how many cuts are needed per day, including today.",
+    guideCard4Title:"4. Backup",
+    guideCard4Body:"Data is saved in your browser. Use JSON export/import for backup or transfer.",
+    todayNeed:"Work needed today",
+    workDays:"work days",
+    remainingWork:"Remaining",
+    dailyTargetHint:"Daily target",
+    noDeadlineDaily:"Set a deadline to show the daily target.",
+    assigned:"Assignment",
+    work:"Task",
+    progress:"Progress",
+    retake:"Check",
+    genga:"genga",
+    complete:"Complete",
+    totalCut:"Total CUT",
+    totalTime:"Total TIME",
+    deadlineCalc:"Deadline calc",
+    dDay:"D-day",
+    remainingCuts:"Remaining work",
+    unset:"Not set",
+    cutLeft:"cuts left",
+    cutsPerDay:"cuts/day",
+    workPerDay:"work/day",
+    deadlineBasis:"Based on remaining LO and genga work",
+    completeText:"complete",
+    episodesCount:"episodes",
+    workNameMerged:"project-name cell merged",
+    emptyEpisode:"No CUT rows to display in this episode.",
+    noDeadlineStatus:"Set a deadline to calculate the daily workload for LO / genga.",
+    allDone:"All assigned cuts complete",
+    deadlinePassed:"The deadline has passed or is today",
+    daysPlan:(days,daily)=>`${daily} work/day needed over ${days} days including today`,
+    footnote:"Data is saved automatically in this browser. Use Export JSON for backup.",
+    cancel:"Cancel",
+    add:"Add",
+    promptNewWork:"Enter the new project name.",
+    promptFirstEpisode:"Enter the first episode number.",
+    promptAddEpisode:(name)=>`Enter the episode number to add to ${name || "Untitled"}.`,
+    alertMinWork:"At least one project is required.",
+    alertMinEpisode:"At least one episode is required.",
+    confirmRemoveWork:(name,count)=>`Remove the entire "${name}" project?\nAll ${count} episodes inside it will be deleted.`,
+    confirmRemoveEpisode:(label)=>`Remove ${label}?`,
+    alertNoCutRows:"There are no CUT rows to remove.",
+    confirmRemoveBulk:(count)=>`The last ${count} rows contain entered data. Remove them anyway?`,
+    confirmReset:"Reset all work/episode/CUT input? This cannot be undone.",
+    importFail:"Import failed. Please check the JSON format.",
+    alertSelectCut:"Click a CUT row first before removing it.",
+    emptyRowLabel:(n)=>`empty row ${n}`,
+    confirmRemoveCut:(label)=>`Remove ${label}?`,
+    clickLo:"LO: in progress (yellow triangle) → done (blue circle) → clear",
+    clickRetake:"Click to check",
+    clickGenga:"genga: in progress (yellow triangle) → done (blue circle) → nigen (black) → clear",
+    stageProgress:"In progress",
+    stageDone:"Done",
+    stageClear:"Clear",
+    collapse:"Collapse",
+    expand:"Expand",
+    collapsed:"Collapsed",
+    hiddenCuts:(n)=>`${n} CUT hidden`,
+    dragWork:"Drag to reorder projects"
+  }
+};
+
+
+function safeGetItem(key){
+  try{
+    return window.localStorage ? window.localStorage.getItem(key) : null;
+  }catch(e){
+    return null;
+  }
+}
+
+function safeSetItem(key, value){
+  try{
+    if(window.localStorage) window.localStorage.setItem(key, value);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function safeRemoveItem(key){
+  try{
+    if(window.localStorage) window.localStorage.removeItem(key);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+const THEME_STORAGE_KEY = "animator_schedule_theme_public_v1";
+let uiLang = safeGetItem(LANG_STORAGE_KEY) || "ko";
+let uiTheme = safeGetItem(THEME_STORAGE_KEY) || "light";
+
+const GUIDE_CONTENT = {
+  ko:[
+    {title:"기본", items:[
+      "작품명, 화수, LO 마감, 원화 마감은 위에서 입력합니다.",
+      "CUT과 TIME은 표에서 바로 입력합니다.",
+      "CUT 번호가 없는 행은 계산과 작업 체크에서 제외됩니다."
+    ]},
+    {title:"선택", items:[
+      "행 번호 클릭: 한 행 선택",
+      "Shift + 행 번호 클릭: 처음 선택한 행부터 클릭한 행까지 범위 선택",
+      "선택 컷 제거: 선택된 행들을 한꺼번에 삭제"
+    ]},
+    {title:"CUT 조작", items:[
+      "행 번호 더블클릭: 아래에 빈 CUT 추가",
+      "Alt + 행 번호 클릭: 선택한 CUT을 그 위치로 이동",
+      "Delete 키: 선택 CUT 삭제"
+    ]},
+    {title:"작업 / 마감", items:[
+      "LO / 원화 클릭: 진행중 → 완료 → 비움",
+      "원화는 완료 다음에 二原 선택 가능",
+      "CHECK는 진척에는 표시되지만 마감 계산에서는 제외됩니다."
+    ]},
+    {title:"저장", items:[
+      "데이터는 브라우저에 자동 저장됩니다.",
+      "다른 PC로 옮길 때는 JSON 내보내기 / 가져오기를 사용합니다."
+    ]}
+  ],
+  ja:[
+    {title:"基本", items:[
+      "作品名、話数、LO締切、原画締切は上部で入力します。",
+      "カットと尺は表に直接入力します。",
+      "カット番号がない行は計算と作業チェックから除外されます。"
+    ]},
+    {title:"選択", items:[
+      "行番号クリック：1行選択",
+      "Shift + 行番号クリック：最初に選んだ行からクリックした行まで範囲選択",
+      "選択カット削除：選択した行をまとめて削除"
+    ]},
+    {title:"カット操作", items:[
+      "行番号ダブルクリック：下に空カット追加",
+      "Alt + 行番号クリック：選択したカットをその位置へ移動",
+      "Deleteキー：選択カット削除"
+    ]},
+    {title:"作業 / 締切", items:[
+      "LO / 原画クリック：進行中 → 完了 → 空欄",
+      "原画は完了の次に二原も選択できます。",
+      "戻しは進捗には表示されますが、締切計算には含まれません。"
+    ]},
+    {title:"保存", items:[
+      "データはブラウザに自動保存されます。",
+      "別PCへ移動する場合はJSON書き出し / 読み込みを使います。"
+    ]}
+  ],
+  en:[
+    {title:"Basic", items:[
+      "Enter project, episode, LO deadline, and genga deadline at the top.",
+      "Enter CUT and TIME directly in the table.",
+      "Rows without a CUT number are excluded from calculations and work checks."
+    ]},
+    {title:"Selection", items:[
+      "Click row number: select one row",
+      "Shift + row number: select a range from the first selected row",
+      "Remove selected CUT: delete all selected rows together"
+    ]},
+    {title:"CUT controls", items:[
+      "Double-click row number: add an empty CUT below",
+      "Alt + row number: move the selected CUT there",
+      "Delete key: delete selected CUT"
+    ]},
+    {title:"Work / deadline", items:[
+      "Click LO / genga: progress → done → empty",
+      "Genga can switch to nigen after done.",
+      "CHECK appears in progress but is excluded from deadline calculation."
+    ]},
+    {title:"Save", items:[
+      "Data is saved automatically in the browser.",
+      "Use JSON export/import to move data to another PC."
+    ]}
+  ]
+};
+
+const guideHtmlCache = {};
+
+function getGuideHtml(lang=uiLang){
+  if(guideHtmlCache[lang]) return guideHtmlCache[lang];
+
+  const sections = GUIDE_CONTENT[lang] || GUIDE_CONTENT.ko;
+  const html = sections.map(section => `
+    <section class="side-guide-section">
+      <h4>${escapeHtml(section.title)}</h4>
+      <ul>${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+  `).join("");
+
+  guideHtmlCache[lang] = html;
+  return html;
+}
+
+function renderGuideContent(force=false){
+  const body = document.getElementById("sideGuideContent");
+  if(!body) return;
+
+  if(!force && body.dataset.guideLang === uiLang && body.innerHTML){
+    return;
+  }
+
+  body.innerHTML = getGuideHtml(uiLang);
+  body.dataset.guideLang = uiLang;
+}
+
+
+function t(key, ...args){
+  const value = (I18N[uiLang] && I18N[uiLang][key]) || I18N.ko[key] || key;
+  return typeof value === "function" ? value(...args) : value;
+}
+
+function applyTheme(){
+  const normalized = uiTheme === "dark" ? "dark" : "light";
+  uiTheme = normalized;
+  document.documentElement.dataset.theme = normalized;
+  safeSetItem(THEME_STORAGE_KEY, normalized);
+  updateThemeButton();
+}
+
+function updateThemeButton(){
+  const btn = document.getElementById("themeToggleBtn");
+  if(!btn) return;
+  btn.textContent = uiTheme === "dark" ? t("lightMode") : t("darkMode");
+}
+
+function toggleTheme(){
+  uiTheme = uiTheme === "dark" ? "light" : "dark";
+  applyTheme();
+}
+
+function setGuideVisible(visible=true){
+  renderGuideContent();
+  const guide = document.getElementById("sideGuidePanel");
+  if(guide){
+    guide.scrollIntoView({block:"nearest"});
+  }
+}
+
+
+function applyLanguage(){
+  document.documentElement.lang = uiLang;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  const select = document.getElementById("languageSelect");
+  if(select) select.value = uiLang;
+  const progress = document.getElementById("progressBoard");
+  if(progress) progress.dataset.title = t("progress");
+  updateThemeButton();
+  updateUndoButton();
+  renderGuideContent(true);
+}
+
+const defaultCuts = Array.from({length:10}, () => ({
+  cut:"",
+  time:"",
+  work:{lo:false, loState:"", retake:false, genga:false, gengaState:"", nigen:false},
+  owner:"",
+  deadline:"",
+  status:"",
+  memo:""
+}));
+
+function makeProject(projectName="", episodeNo="", cuts=null, deadlineDate=""){
+  return {
+    id:"p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7),
+    projectName,
+    episodeNo,
+    deadlineDate,
+    loDeadlineDate:deadlineDate,
+    gengaDeadlineDate:deadlineDate,
+    cuts: cuts ? JSON.parse(JSON.stringify(cuts)) : []
+  };
+}
+
+function blankCut(){
+  return {cut:"", time:"", work:{lo:false, loState:"", retake:false, genga:false, gengaState:""}, owner:"", deadline:"", status:"", memo:""};
+}
+
+function blankCuts(count=10){
+  return Array.from({length:count}, () => blankCut());
+}
+
+function makeEmptyState(){
+  return {
+    selectedProjectIndex:0,
+    collapsedWorks:{},
+    collapsedEpisodes:{},
+    projects:[makeProject("", "", blankCuts(10), "")]
+  };
+}
+
+function getBulkCutCount(){
+  const input = document.getElementById("bulkCutCount");
+  const n = Math.max(1, Math.min(999, parseInt(input?.value || "10", 10) || 10));
+  if(input) input.value = String(n);
+  return n;
+}
+
+let state = loadState();
+let selectedProjectIndex = state.selectedProjectIndex || 0;
+let selectedIndex = null;
+
+const UNDO_LIMIT = 30;
+let undoStack = [];
+let isUndoRestoring = false;
+let lastCommittedStateJson = "";
+
+function snapshotStateJson(){
+  state.selectedProjectIndex = selectedProjectIndex;
+  state.collapsedWorks = state.collapsedWorks || {};
+  state.collapsedEpisodes = state.collapsedEpisodes || {};
+  return JSON.stringify(state);
+}
+
+function updateUndoButton(){
+  const btn = document.getElementById("undoBtn");
+  if(!btn) return;
+  btn.disabled = undoStack.length === 0;
+  btn.title = `${t("undo")} (Ctrl+Z)`;
+}
+
+function markHistoryCommitted(){
+  lastCommittedStateJson = snapshotStateJson();
+  updateUndoButton();
+}
+
+function undoLastChange(){
+  if(saveTimer){
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    saveState();
+  }
+
+  if(!undoStack.length) return;
+
+  const previousJson = undoStack.pop();
+  try{
+    isUndoRestoring = true;
+    state = normalizeState(JSON.parse(previousJson));
+    selectedProjectIndex = state.selectedProjectIndex || 0;
+    selectedIndex = null;
+    selectedCutKeys = new Set();
+    selectionAnchorCut = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }catch(err){
+    console.warn("Undo failed", err);
+  }finally{
+    isUndoRestoring = false;
+    updateUndoButton();
+  }
+}
+
+function currentProject(){
+  if(!state.projects.length){
+    state.projects.push(makeProject("", "", blankCuts(10), ""));
+    selectedProjectIndex = 0;
+  }
+  if(selectedProjectIndex < 0 || selectedProjectIndex >= state.projects.length){
+    selectedProjectIndex = 0;
+  }
+  return state.projects[selectedProjectIndex];
+}
+
+function normalizeState(parsed){
+  if(parsed && Array.isArray(parsed.projects)){
+    parsed.projects.forEach(p => {
+      p.id = p.id || ("p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7));
+      p.projectName = p.projectName ?? "Untitled";
+      p.episodeNo = p.episodeNo ?? "";
+      p.deadlineDate = p.deadlineDate ?? "";
+      p.loDeadlineDate = p.loDeadlineDate ?? p.deadlineDate ?? "";
+      p.gengaDeadlineDate = p.gengaDeadlineDate ?? p.deadlineDate ?? "";
+      p.cuts = Array.isArray(p.cuts) ? p.cuts : [];
+    });
+    parsed.selectedProjectIndex = parsed.selectedProjectIndex ?? 0;
+    parsed.collapsedWorks = parsed.collapsedWorks && typeof parsed.collapsedWorks === "object" ? parsed.collapsedWorks : {};
+    parsed.collapsedEpisodes = parsed.collapsedEpisodes && typeof parsed.collapsedEpisodes === "object" ? parsed.collapsedEpisodes : {};
+    return parsed;
+  }
+
+  if(parsed && Array.isArray(parsed.cuts)){
+    return {
+      selectedProjectIndex:0,
+      collapsedWorks:{},
+      collapsedEpisodes:{},
+      projects:[makeProject(parsed.projectName || "", parsed.episodeNo || "", parsed.cuts, parsed.deadlineDate || "")]
+    };
+  }
+
+  return {
+    selectedProjectIndex:0,
+    collapsedWorks:{},
+    collapsedEpisodes:{},
+    projects:[makeProject("", "", defaultCuts, "")]
+  };
+}
+
+function loadState(){
+  const saved = safeGetItem(STORAGE_KEY);
+  if(saved){
+    try { return normalizeState(JSON.parse(saved)); } catch(e) {}
+  }
+
+  const oldSaved = safeGetItem(OLD_STORAGE_KEY);
+  if(oldSaved){
+    try { return normalizeState(JSON.parse(oldSaved)); } catch(e) {}
+  }
+
+  return normalizeState(null);
+}
+
+function saveState(){
+  state.selectedProjectIndex = selectedProjectIndex;
+  state.collapsedWorks = state.collapsedWorks || {};
+  state.collapsedEpisodes = state.collapsedEpisodes || {};
+
+  const currentJson = JSON.stringify(state);
+
+  if(isUndoRestoring){
+    lastCommittedStateJson = currentJson;
+  }else if(!lastCommittedStateJson){
+    lastCommittedStateJson = currentJson;
+  }else if(currentJson !== lastCommittedStateJson){
+    undoStack.push(lastCommittedStateJson);
+    if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+    lastCommittedStateJson = currentJson;
+  }
+
+  safeSetItem(STORAGE_KEY, currentJson);
+  updateUndoButton();
+}
+
+let saveTimer = null;
+let renderTimer = null;
+
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveState();
+  }, 260);
+}
+
+let progressTimer = null;
+let lastProgressRenderKey = "";
+
+function scheduleRenderTable(delay=140){
+  if(renderTimer) clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    renderTimer = null;
+    renderTable();
+  }, delay);
+}
+
+function scheduleProgressBoard(delay=120){
+  if(progressTimer) clearTimeout(progressTimer);
+  progressTimer = setTimeout(() => {
+    progressTimer = null;
+    renderProgressBoard();
+  }, delay);
+}
+
+function projectLabel(project){
+  return `${project.projectName || "Untitled"} / ${project.episodeNo || "-"}${t("episodeSuffix")}`;
+}
+
+function normalizeWorkName(name){
+  return String(name || "Untitled").trim() || "Untitled";
+}
+
+function groupedProjects(){
+  const groups = [];
+  const map = new Map();
+
+  state.projects.forEach((project, index) => {
+    const key = normalizeWorkName(project.projectName);
+    if(!map.has(key)){
+      const group = {name:key, items:[]};
+      map.set(key, group);
+      groups.push(group);
+    }
+    map.get(key).items.push({project, index});
+  });
+
+  return groups;
+}
+
+function workCollapseKey(name){
+  return normalizeWorkName(name);
+}
+
+function episodeCollapseKey(project, index){
+  if(!project.id){
+    project.id = "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
+  }
+  return project.id || `episode_${index}`;
+}
+
+function isWorkCollapsed(name){
+  state.collapsedWorks = state.collapsedWorks || {};
+  return Boolean(state.collapsedWorks[workCollapseKey(name)]);
+}
+
+function isEpisodeCollapsed(project, index){
+  state.collapsedEpisodes = state.collapsedEpisodes || {};
+  return Boolean(state.collapsedEpisodes[episodeCollapseKey(project, index)]);
+}
+
+function setWorkCollapsed(name, collapsed){
+  state.collapsedWorks = state.collapsedWorks || {};
+  const key = workCollapseKey(name);
+  if(collapsed) state.collapsedWorks[key] = true;
+  else delete state.collapsedWorks[key];
+}
+
+function setEpisodeCollapsed(project, index, collapsed){
+  state.collapsedEpisodes = state.collapsedEpisodes || {};
+  const key = episodeCollapseKey(project, index);
+  if(collapsed) state.collapsedEpisodes[key] = true;
+  else delete state.collapsedEpisodes[key];
+}
+
+function reorderWorkGroups(fromKey, toKey, placeAfter=false){
+  if(!fromKey || !toKey || fromKey === toKey) return false;
+
+  const selectedId = currentProject()?.id;
+  const groups = groupedProjects();
+  const fromIndex = groups.findIndex(group => workCollapseKey(group.name) === fromKey);
+  const toIndex = groups.findIndex(group => workCollapseKey(group.name) === toKey);
+  if(fromIndex < 0 || toIndex < 0) return false;
+
+  const [moved] = groups.splice(fromIndex, 1);
+  let insertIndex = groups.findIndex(group => workCollapseKey(group.name) === toKey);
+  if(insertIndex < 0) insertIndex = groups.length;
+  if(placeAfter) insertIndex += 1;
+
+  groups.splice(insertIndex, 0, moved);
+  state.projects = groups.flatMap(group => group.items.map(item => item.project));
+
+  const nextSelected = state.projects.findIndex(project => project.id === selectedId);
+  selectedProjectIndex = nextSelected >= 0 ? nextSelected : 0;
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  return true;
+}
+
+function clearWorkDropClasses(){
+  document.querySelectorAll("#tbody .work-group.drop-before, #tbody .work-group.drop-after, #tbody .work-group.dragging").forEach(el => {
+    el.classList.remove("drop-before","drop-after","dragging");
+  });
+}
+
+function getProjectCounts(project){
+  const oldSelectedProjectIndex = selectedProjectIndex;
+  const idx = state.projects.indexOf(project);
+  selectedProjectIndex = idx >= 0 ? idx : oldSelectedProjectIndex;
+  const counts = getCounts();
+  selectedProjectIndex = oldSelectedProjectIndex;
+  return counts;
+}
+
+function timeToFrames(t){
+  if(!t) return 0;
+  const parts = String(t).split("+").map(x => parseInt(x.trim(),10));
+  const sec = isNaN(parts[0]) ? 0 : parts[0];
+  const frames = isNaN(parts[1]) ? 0 : parts[1];
+  return sec * 24 + frames;
+}
+
+function framesToTime(frames){
+  const sec = Math.floor(frames / 24);
+  const f = frames % 24;
+  return sec + "+" + f;
+}
+
+function hasCutNumber(c){
+  return String(c.cut ?? "").trim() !== "";
+}
+
+function clearWorkForEmptyCut(c){
+  c.work = c.work || {};
+  c.work.loState = "";
+  c.work.gengaState = "";
+  c.work.lo = false;
+  c.work.genga = false;
+  c.work.nigen = false;
+  c.work.retake = false;
+  c.status = "";
+  return c;
+}
+
+
+function normalizeStageState(value, fallbackDone=false){
+  if(["progress","done","nigen"].includes(value)) return value;
+  return fallbackDone ? "done" : "";
+}
+
+function normalizeCutWork(c){
+  c.work = c.work || {};
+
+  if(!hasCutNumber(c)){
+    return clearWorkForEmptyCut(c);
+  }
+
+  c.work.retake = Boolean(c.work.retake);
+
+  const hasLoState = Object.prototype.hasOwnProperty.call(c.work, "loState");
+  const hasGengaState = Object.prototype.hasOwnProperty.call(c.work, "gengaState");
+
+  // 기존 저장 데이터는 boolean 값을 done으로 변환하되,
+  // 사용자가 완료 표시를 다시 비웠을 때는 빈 상태가 유지되도록 한다.
+  c.work.loState = normalizeStageState(c.work.loState, !hasLoState && Boolean(c.work.lo));
+  c.work.gengaState = normalizeStageState(c.work.gengaState, !hasGengaState && Boolean(c.work.genga));
+
+  c.work.lo = c.work.loState === "done";
+  c.work.genga = c.work.gengaState === "done";
+  c.work.nigen = c.work.gengaState === "nigen";
+  return c;
+}
+
+function stageCellClass(state){
+  if(state === "done") return "state-done";
+  if(state === "progress") return "state-progress";
+  if(state === "nigen") return "state-nigen";
+  return "";
+}
+
+function cycleStageState(state, allowNigen=false){
+  if(state === "progress") return "done";
+  if(state === "done") return allowNigen ? "nigen" : "";
+  if(state === "nigen") return "";
+  return "progress";
+}
+
+function getRowStageClass(c){
+  normalizeCutWork(c);
+  if(c.work.gengaState === "done") return "row-stage-genga";
+  if(c.work.gengaState === "nigen") return "row-stage-nigen";
+  if(c.work.gengaState === "progress" || c.work.loState === "progress" || c.work.retake) return "row-stage-progress";
+  if(c.work.loState === "done") return "row-stage-lo";
+  return "";
+}
+
+function updateStatusFromWork(c){
+  normalizeCutWork(c);
+  if(c.work.gengaState === "nigen") c.status = "二原";
+  else if(c.work.gengaState === "done") c.status = t("genga");
+  else if(c.work.gengaState === "progress") c.status = `${t("genga")} ${t("stageProgress")}`;
+  else if(c.work.retake) c.status = t("retake");
+  else if(c.work.loState === "done") c.status = "LO";
+  else if(c.work.loState === "progress") c.status = `LO ${t("stageProgress")}`;
+  else c.status = "";
+  return c;
+}
+
+let stageMenuTarget = null;
+
+function applyStageChoiceToCut(key, cut, choice){
+  normalizeCutWork(cut);
+  const next = choice || "";
+
+  if(key === "lo"){
+    cut.work.loState = next === "nigen" ? "" : next;
+    cut.work.lo = cut.work.loState === "done";
+  } else if(key === "genga"){
+    cut.work.gengaState = next;
+    cut.work.genga = cut.work.gengaState === "done";
+    cut.work.nigen = cut.work.gengaState === "nigen";
+  }
+
+  normalizeCutWork(cut);
+  updateStatusFromWork(cut);
+}
+
+function getStageCutFromCell(cell){
+  const tr = cell?.closest("tr");
+  const key = cell?.dataset?.work;
+  const projectIndex = Number(cell?.dataset?.projectIndex ?? tr?.dataset?.projectIndex ?? selectedProjectIndex);
+  const cutIndex = Number(cell?.dataset?.cutIndex ?? tr?.dataset?.index);
+
+  if(!["lo","genga"].includes(key)) return null;
+  if(Number.isNaN(projectIndex) || Number.isNaN(cutIndex)) return null;
+  if(!state.projects[projectIndex] || !state.projects[projectIndex].cuts[cutIndex]) return null;
+  if(!hasCutNumber(state.projects[projectIndex].cuts[cutIndex])) return null;
+
+  return {key, projectIndex, cutIndex};
+}
+
+function showStageMenu(e, cell){
+  const target = getStageCutFromCell(cell);
+  if(!target) return;
+
+  e.preventDefault();
+  stageMenuTarget = target;
+  selectedProjectIndex = target.projectIndex;
+  selectedIndex = target.cutIndex;
+
+  const menu = document.getElementById("stageMenu");
+  menu.classList.toggle("allow-nigen", target.key === "genga");
+  menu.hidden = false;
+
+  const margin = 8;
+  const rect = menu.getBoundingClientRect();
+  let left = e.clientX;
+  let top = e.clientY;
+  left = Math.min(left, window.innerWidth - rect.width - margin);
+  top = Math.min(top, window.innerHeight - rect.height - margin);
+  menu.style.left = Math.max(margin, left) + "px";
+  menu.style.top = Math.max(margin, top) + "px";
+}
+
+function hideStageMenu(){
+  const menu = document.getElementById("stageMenu");
+  if(menu) menu.hidden = true;
+  stageMenuTarget = null;
+}
+
+function getAssignedCuts(project=currentProject()){
+  return project.cuts.filter(hasCutNumber);
+}
+
+function getEpisodeTotalFrames(project){
+  return getAssignedCuts(project).reduce((sum, cut) => sum + timeToFrames(cut.time), 0);
+}
+
+function getEpisodeTotalTime(project){
+  return framesToTime(getEpisodeTotalFrames(project));
+}
+
+function updateEpisodeTotalTimeDisplay(projectIndex){
+  const project = state.projects[projectIndex];
+  if(!project) return;
+
+  const label = `${t("totalTime")}: ${getEpisodeTotalTime(project)}`;
+  document.querySelectorAll(`.episode-total-time[data-project-index="${projectIndex}"]`).forEach(el => {
+    el.textContent = label;
+  });
+}
+
+function getCounts(){
+  const project = currentProject();
+  let total = 0;
+  let lo = 0;
+  let retake = 0;
+  let genga = 0;
+  let totalFrames = 0;
+  let complete = 0;
+
+  for(const cut of project.cuts){
+    normalizeCutWork(cut);
+    if(!hasCutNumber(cut)) continue;
+
+    total += 1;
+    if(cut.work.loState === "done") lo += 1;
+    if(cut.work.retake) retake += 1;
+    if(cut.work.gengaState === "done" || cut.work.gengaState === "nigen"){
+      genga += 1;
+      complete += 1;
+    }
+    totalFrames += timeToFrames(cut.time);
+  }
+
+  return {
+    total,
+    lo,
+    retake,
+    genga,
+    totalFrames,
+    complete,
+    remaining:Math.max(total - complete, 0),
+    stageRemaining:{
+      lo:Math.max(total - lo, 0),
+      retake:Math.max(total - retake, 0),
+      genga:Math.max(total - genga, 0)
+    }
+  };
+}
+function isAlert(c){
+  normalizeCutWork(c);
+  if(!c.deadline || c.work.gengaState === "done" || c.work.gengaState === "nigen") return false;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const d = new Date(c.deadline + "T00:00:00");
+  const diffDays = Math.ceil((d - today) / 86400000);
+  return diffDays <= 2;
+}
+
+function progressClass(done, total){
+  const ratio = total ? done / total : 0;
+  if(ratio >= .75) return "ok";
+  if(ratio >= .35) return "mid";
+  return "warn";
+}
+
+function renderSummary(){
+  // 상단 요약 카드 줄은 제거하고, 総尺/Total TIME은 각 에피소드별로 표시한다.
+  const summary = document.getElementById("summary");
+  if(summary) summary.innerHTML = "";
+}
+
+
+
+function formatDailyCuts(value){
+  if(value === null || value === undefined || value === "" || Number.isNaN(Number(value))) return "-";
+  const n = Number(value);
+  return String(Math.ceil(n));
+}
+
+function formatDday(diff){
+  if(diff === null || diff === undefined || Number.isNaN(diff)) return "-";
+  if(diff === 0) return "D-Day";
+  if(diff > 0) return `D-${diff}`;
+  return `D+${Math.abs(diff)}`;
+}
+
+function getDeadlineStats(counts=getCounts()){
+  const project = currentProject();
+  const legacyDeadline = project.deadlineDate ?? "";
+  const loDeadline = project.loDeadlineDate ?? legacyDeadline ?? "";
+  const gengaDeadline = project.gengaDeadlineDate ?? legacyDeadline ?? "";
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const loRemaining = counts.stageRemaining.lo;
+  const gengaRemaining = counts.stageRemaining.genga;
+  const deadlineRemaining = loRemaining + gengaRemaining; // Check/戻し is intentionally excluded.
+
+  function buildStageStat(key, label, done, remaining, deadline){
+    const percent = counts.total ? Math.round((done / counts.total) * 100) : 0;
+    const stat = {
+      key,
+      label,
+      done,
+      remaining,
+      percent,
+      deadline:deadline || "",
+      hasDeadline:Boolean(deadline),
+      dDay:null,
+      dDayLabel:"-",
+      daysLeft:null,
+      dailyCuts:null
+    };
+
+    if(!deadline){
+      return stat;
+    }
+
+    const d = new Date(deadline + "T00:00:00");
+    const diff = Math.ceil((d - today) / 86400000);
+    const daysLeft = Math.max(diff + 1, 0); // includes today
+    stat.dDay = diff;
+    stat.dDayLabel = formatDday(diff);
+    stat.daysLeft = daysLeft;
+    stat.dailyCuts = daysLeft > 0 ? remaining / daysLeft : remaining;
+    return stat;
+  }
+
+  const stageStats = [
+    buildStageStat("lo", "LO", counts.lo, loRemaining, loDeadline),
+    buildStageStat("genga", t("genga"), counts.genga, gengaRemaining, gengaDeadline)
+  ];
+
+  const hasDeadline = stageStats.some(stage => stage.hasDeadline);
+  const loStage = stageStats[0];
+  const gengaStage = stageStats[1];
+
+  let status = t("noDeadlineStatus");
+  if(hasDeadline){
+    if(deadlineRemaining === 0){
+      status = t("allDone");
+    } else {
+      const loText = loStage.hasDeadline
+        ? `LO ${loStage.dDayLabel} · ${formatDailyCuts(loStage.dailyCuts)}${t("cutsPerDay")}`
+        : `LO ${t("deadlineUnset")}`;
+      const gengaText = gengaStage.hasDeadline
+        ? `${t("genga")} ${gengaStage.dDayLabel} · ${formatDailyCuts(gengaStage.dailyCuts)}${t("cutsPerDay")}`
+        : `${t("genga")} ${t("deadlineUnset")}`;
+      status = `${loText} / ${gengaText}`;
+    }
+  }
+
+  return {
+    hasDeadline,
+    deadline:"",
+    loDeadline,
+    gengaDeadline,
+    dDay:null,
+    dDayLabel:hasDeadline ? `LO ${loStage.dDayLabel} / ${t("genga")} ${gengaStage.dDayLabel}` : "-",
+    daysLeft:null,
+    dailyCuts:null,
+    dailyWorkUnits:null,
+    remaining:deadlineRemaining,
+    progressPercent:counts.total ? Math.round((counts.complete / counts.total) * 100) : 0,
+    stageStats,
+    status
+  };
+}
+
+function renderProgressBoard(){
+  const project = currentProject();
+  const counts = getCounts();
+  const deadlineStats = getDeadlineStats(counts);
+  const items = [
+    ["LO", counts.lo],
+    [t("retake"), counts.retake],
+    [t("genga"), counts.genga]
+  ];
+
+  const total = Math.max(counts.total, 1);
+  const hasDeadline = deadlineStats.hasDeadline;
+
+  const loStage = deadlineStats.stageStats.find(stage => stage.key === "lo") || {remaining:0, dailyCuts:null, label:"LO", dDayLabel:"-", deadline:"", hasDeadline:false};
+  const gengaStage = deadlineStats.stageStats.find(stage => stage.key === "genga") || {remaining:0, dailyCuts:null, label:t("genga"), dDayLabel:"-", deadline:"", hasDeadline:false};
+  const loDailyValue = loStage.hasDeadline ? formatDailyCuts(loStage.dailyCuts) : "-";
+  const gengaDailyValue = gengaStage.hasDeadline ? formatDailyCuts(gengaStage.dailyCuts) : "-";
+  const dailyClass = !hasDeadline ? "warn" : (deadlineStats.remaining === 0 ? "done" : ((loStage.hasDeadline && loStage.daysLeft <= 0 && loStage.remaining > 0) || (gengaStage.hasDeadline && gengaStage.daysLeft <= 0 && gengaStage.remaining > 0) ? "danger" : ""));
+  const projectLabelText = `${project.projectName || "Untitled"} · ${project.episodeNo || "-"}`;
+  const deadlineLine = `
+    <span><b>LO</b> ${escapeHtml(loStage.deadline || "-")}</span>
+    <span><b>${escapeHtml(t("genga"))}</b> ${escapeHtml(gengaStage.deadline || "-")}</span>
+  `;
+
+  const progressRenderKey = [
+    uiLang,
+    selectedProjectIndex,
+    counts.total,
+    counts.lo,
+    counts.retake,
+    counts.genga,
+    counts.stageRemaining.lo,
+    counts.stageRemaining.genga,
+    loStage.deadline,
+    loStage.dDayLabel,
+    loDailyValue,
+    gengaStage.deadline,
+    gengaStage.dDayLabel,
+    gengaDailyValue,
+    deadlineStats.remaining,
+    deadlineStats.status,
+    project.projectName,
+    project.episodeNo
+  ].join("|");
+
+  const progressBoard = document.getElementById("progressBoard");
+  if(!progressBoard) return;
+
+  if(progressRenderKey === lastProgressRenderKey && progressBoard.dataset.rendered === "1"){
+    renderGuideContent();
+    return;
+  }
+  lastProgressRenderKey = progressRenderKey;
+  progressBoard.dataset.rendered = "1";
+
+  progressBoard.innerHTML = `
+    ${items.map(([label, value]) => {
+      const percent = Math.round((value / total) * 100);
+      const hue = Math.round(percent * 1.28);
+      return `
+        <div class="progress-tile progress-tile-numeric" style="--hue:${hue}; --p:${percent}">
+          <div class="progress-tile-head">
+            <span>${escapeHtml(label)}</span>
+          </div>
+          <div class="progress-count numeric-only">${value}<small> / ${counts.total}</small></div>
+          <div class="progress-gauge" aria-hidden="true"><span style="width:${percent}%"></span></div>
+        </div>
+      `;
+    }).join("")}
+    <div class="deadline-panel">
+      <div class="deadline-title">
+        <span>${escapeHtml(t("deadlineCalc"))}</span>
+        <span class="split-deadline-line">${deadlineLine}</span>
+      </div>
+
+      <div class="deadline-context">${escapeHtml(projectLabelText)}</div>
+
+      <div class="daily-focus daily-focus-independent ${dailyClass}">
+        <div class="daily-main">
+          <div class="daily-label">${escapeHtml(t("todayNeed"))}</div>
+          <div class="daily-status">${escapeHtml(deadlineStats.status)}</div>
+        </div>
+        <div class="daily-independent-grid">
+          <div class="daily-independent-card">
+            <span>LO</span>
+            <strong>${escapeHtml(loDailyValue)}</strong>
+            <em>${escapeHtml(t("workPerDay"))}</em>
+            <small class="deadline-mini">${escapeHtml(t("deadlineFor"))}: ${escapeHtml(loStage.deadline || "-")} · ${escapeHtml(loStage.dDayLabel)}</small>
+          </div>
+          <div class="daily-independent-card">
+            <span>${escapeHtml(t("genga"))}</span>
+            <strong>${escapeHtml(gengaDailyValue)}</strong>
+            <em>${escapeHtml(t("workPerDay"))}</em>
+            <small class="deadline-mini">${escapeHtml(t("deadlineFor"))}: ${escapeHtml(gengaStage.deadline || "-")} · ${escapeHtml(gengaStage.dDayLabel)}</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="deadline-subgrid">
+        <div class="deadline-metric">
+          <div class="k">LO ${escapeHtml(t("dDay"))}</div>
+          <div class="v">${escapeHtml(loStage.dDayLabel)}</div>
+        </div>
+        <div class="deadline-metric">
+          <div class="k">${escapeHtml(t("genga"))} ${escapeHtml(t("dDay"))}</div>
+          <div class="v">${escapeHtml(gengaStage.dDayLabel)}</div>
+        </div>
+        <div class="deadline-metric">
+          <div class="k">${escapeHtml(t("remainingCuts"))}</div>
+          <div class="v">${escapeHtml(deadlineStats.remaining)}</div>
+        </div>
+      </div>
+
+    </div>
+
+    <section class="side-guide" id="sideGuidePanel">
+      <div class="side-guide-title">${escapeHtml(t("guide"))}</div>
+      <div id="sideGuideContent" class="side-guide-content"></div>
+    </section>
+  `;
+  renderGuideContent();
+}
+
+function getTodayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+let deadlineTodayKey = getTodayKey();
+setInterval(() => {
+  const key = getTodayKey();
+  if(key !== deadlineTodayKey){
+    deadlineTodayKey = key;
+    renderProgressBoard();
+  }
+}, 60000);
+
+function renderProjectEpisodeSelectors(){
+  const projectSelect = document.getElementById("projectSelect");
+  const episodeSelect = document.getElementById("episodeSelect");
+  if(!projectSelect || !episodeSelect) return;
+
+  const groups = groupedProjects();
+  const current = currentProject();
+  const currentKey = normalizeWorkName(current.projectName);
+
+  projectSelect.innerHTML = groups.map(group => {
+    const firstIndex = group.items[0]?.index ?? 0;
+    const selected = normalizeWorkName(group.name) === currentKey ? "selected" : "";
+    const label = `${group.name || "Untitled"} · ${group.items.length}${t("episodeSuffix")}`;
+    return `<option value="${firstIndex}" ${selected}>${escapeHtml(label)}</option>`;
+  }).join("");
+
+  const currentGroup = groups.find(group => normalizeWorkName(group.name) === currentKey) || groups[0];
+  const episodeItems = currentGroup ? currentGroup.items : state.projects.map((p, index) => ({project:p, index}));
+  episodeSelect.innerHTML = episodeItems.map(item => {
+    const selected = item.index === selectedProjectIndex ? "selected" : "";
+    const label = `${item.project.episodeNo || "-"}${t("episodeSuffix")} · ${item.project.cuts.filter(hasCutNumber).length} ${t("cut")}`;
+    return `<option value="${item.index}" ${selected}>${escapeHtml(label)}</option>`;
+  }).join("");
+}
+
+function syncCurrentControlsLight(updateProgress=false){
+  const project = currentProject();
+
+  const projectNameEl = document.getElementById("projectName");
+  const episodeNoEl = document.getElementById("episodeNo");
+  const loDeadlineEl = document.getElementById("loDeadlineDate");
+  const gengaDeadlineEl = document.getElementById("gengaDeadlineDate");
+
+  if(projectNameEl && document.activeElement !== projectNameEl) projectNameEl.value = project.projectName;
+  if(episodeNoEl && document.activeElement !== episodeNoEl) episodeNoEl.value = project.episodeNo;
+  if(loDeadlineEl && document.activeElement !== loDeadlineEl) loDeadlineEl.value = project.loDeadlineDate ?? project.deadlineDate ?? "";
+  if(gengaDeadlineEl && document.activeElement !== gengaDeadlineEl) gengaDeadlineEl.value = project.gengaDeadlineDate ?? project.deadlineDate ?? "";
+
+  const episodeSelect = document.getElementById("episodeSelect");
+  if(episodeSelect) episodeSelect.value = String(selectedProjectIndex);
+
+  const projectSelect = document.getElementById("projectSelect");
+  if(projectSelect){
+    const currentKey = normalizeWorkName(project.projectName);
+    const group = groupedProjects().find(group => normalizeWorkName(group.name) === currentKey);
+    const firstIndex = group?.items?.[0]?.index;
+    if(firstIndex !== undefined) projectSelect.value = String(firstIndex);
+  }
+
+  if(updateProgress) renderProgressBoard();
+}
+
+function refreshCurrentControls(){
+  const project = currentProject();
+  document.getElementById("projectName").value = project.projectName;
+  document.getElementById("episodeNo").value = project.episodeNo;
+  document.getElementById("loDeadlineDate").value = project.loDeadlineDate ?? project.deadlineDate ?? "";
+  document.getElementById("gengaDeadlineDate").value = project.gengaDeadlineDate ?? project.deadlineDate ?? "";
+  renderProjectEpisodeSelectors();
+  renderSummary();
+  renderProgressBoard();
+}
+
+function placeCaretAtEnd(el){
+  if(!el || !el.isContentEditable) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function updateCellValueFromDom(td){
+  if(!td) return;
+  const field = td.dataset.field;
+  const value = td.textContent.trim();
+  const tr = td.closest("tr");
+
+  if(field === "projectName"){
+    const pidx = Number(td.dataset.projectIndex ?? selectedProjectIndex);
+    const indexes = td.dataset.groupIndexes
+      ? td.dataset.groupIndexes.split(",").map(Number).filter(n => !Number.isNaN(n))
+      : [pidx];
+    indexes.forEach(idx => {
+      if(state.projects[idx]) state.projects[idx].projectName = value;
+    });
+    selectedProjectIndex = pidx;
+  } else if(field === "episodeNo"){
+    const pidx = Number(td.dataset.projectIndex ?? selectedProjectIndex);
+    if(state.projects[pidx]) state.projects[pidx].episodeNo = value;
+    selectedProjectIndex = pidx;
+  } else if(["cut","time"].includes(field)){
+    const pidx = Number(td.dataset.projectIndex ?? tr?.dataset.projectIndex ?? selectedProjectIndex);
+    const idx = Number(td.dataset.cutIndex ?? tr?.dataset.index);
+    if(!Number.isNaN(pidx)) selectedProjectIndex = pidx;
+    if(!Number.isNaN(idx) && currentProject().cuts[idx]){
+      const cut = currentProject().cuts[idx];
+      cut[field] = value;
+      if(field === "cut" && !hasCutNumber(cut)){
+        clearWorkForEmptyCut(cut);
+      }
+    }
+  }
+}
+
+function getIndexForCell(cell, tr){
+  const field = cell?.dataset?.field;
+  if(field === "projectName" || field === "episodeNo") return null;
+  if(cell?.dataset?.cutIndex !== undefined) return Number(cell.dataset.cutIndex);
+  if(!tr || tr.dataset.index === "" || tr.dataset.index === undefined) return null;
+  return Number(tr.dataset.index);
+}
+
+let cutClickTimer = null;
+
+function rowCellKeysFromMarker(marker){
+  const tr = marker.closest("tr");
+  if(!tr) return [];
+  return [...tr.querySelectorAll(".selectable-cell")]
+    .map(cell => cellKey(Number(cell.dataset.row), Number(cell.dataset.col)));
+}
+
+function isRowSelectedByMarker(marker){
+  const keys = rowCellKeysFromMarker(marker);
+  return keys.length > 0 && keys.every(key => selectedCells.has(key));
+}
+
+function setRowSelectedByMarker(marker, selected=true){
+  const keys = rowCellKeysFromMarker(marker);
+  keys.forEach(key => {
+    if(selected) selectedCells.add(key);
+    else selectedCells.delete(key);
+  });
+}
+
+function syncRowSelectionClass(){
+  selectionRowDomCache.forEach(row => {
+    if(row) row.classList.remove("cut-row-selected");
+  });
+  selectionRowDomCache = [];
+
+  getEffectiveSelectedCutKeys().forEach(key => {
+    const {projectIndex, cutIndex} = parseCutKey(key);
+    if(Number.isNaN(projectIndex) || Number.isNaN(cutIndex)) return;
+
+    const tr = document.querySelector(`#tbody tr[data-project-index="${projectIndex}"][data-index="${cutIndex}"]`);
+    if(tr){
+      tr.classList.add("cut-row-selected");
+      selectionRowDomCache.push(tr);
+    }
+  });
+}
+
+function selectRowMarker(marker, mode="single"){
+  const projectIndex = Number(marker.dataset.projectIndex);
+  const cutIndex = Number(marker.dataset.cutClick);
+  if(Number.isNaN(projectIndex) || Number.isNaN(cutIndex)) return;
+
+  const previousProjectIndex = selectedProjectIndex;
+  selectedProjectIndex = projectIndex;
+  selectedIndex = cutIndex;
+
+  if(mode === "range" && selectionAnchorCut && selectionAnchorCut.projectIndex === projectIndex){
+    const startIndex = Math.min(selectionAnchorCut.cutIndex, cutIndex);
+    const endIndex = Math.max(selectionAnchorCut.cutIndex, cutIndex);
+    selectedCutKeys = new Set();
+
+    for(let i=startIndex; i<=endIndex; i++){
+      if(state.projects[projectIndex]?.cuts[i]){
+        selectedCutKeys.add(cutKey(projectIndex, i));
+      }
+    }
+  } else {
+    selectedCutKeys = new Set([cutKey(projectIndex, cutIndex)]);
+    selectionAnchorCut = {projectIndex, cutIndex};
+
+    const firstCell = marker.closest("tr")?.querySelector(".selectable-cell");
+    if(firstCell){
+      selectionAnchor = getCellCoords(firstCell);
+    } else {
+      selectionAnchor = null;
+    }
+  }
+
+  selectedCells = new Set();
+  applySelectionClasses();
+  syncCurrentControlsLight(previousProjectIndex !== selectedProjectIndex);
+}
+
+
+function handleCutRowSingleClick(projectIndex, cutIndex, event=null){
+  const marker = event?.target?.closest?.("[data-cut-click]");
+  if(!marker) return;
+
+  if(event?.altKey && selectedIndex !== null && selectedProjectIndex === Number(projectIndex) && selectedIndex !== Number(cutIndex)){
+    reorderCutRow(Number(projectIndex), selectedIndex, Number(cutIndex), false);
+    return;
+  }
+
+  if(event?.shiftKey){
+    selectRowMarker(marker, "range");
+  } else {
+    selectRowMarker(marker, "single");
+  }
+}
+
+function handleCutRowDoubleClick(projectIndex, cutIndex){
+  if(cutClickTimer){
+    clearTimeout(cutClickTimer);
+    cutClickTimer = null;
+  }
+  insertCutAfter(Number(projectIndex), Number(cutIndex));
+}
+
+
+function clearCutDropClasses(){
+  // CUT drag UI was removed. Kept as a no-op for compatibility.
+}
+
+function insertCutAfter(projectIndex, cutIndex){
+  const project = state.projects[projectIndex];
+  if(!project) return;
+  const safeIndex = Math.max(-1, Math.min(Number(cutIndex), project.cuts.length - 1));
+  project.cuts.splice(safeIndex + 1, 0, blankCut());
+  selectedProjectIndex = projectIndex;
+  selectedIndex = safeIndex + 1;
+  selectedCutKeys = new Set([cutKey(projectIndex, selectedIndex)]);
+  selectionAnchorCut = {projectIndex, cutIndex:selectedIndex};
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+}
+
+function reorderCutRow(projectIndex, fromIndex, toIndex, placeAfter){
+  const project = state.projects[projectIndex];
+  if(!project) return false;
+
+  fromIndex = Number(fromIndex);
+  toIndex = Number(toIndex);
+  if(Number.isNaN(fromIndex) || Number.isNaN(toIndex)) return false;
+  if(fromIndex < 0 || fromIndex >= project.cuts.length) return false;
+  if(toIndex < 0 || toIndex >= project.cuts.length) return false;
+  if(fromIndex === toIndex) return false;
+
+  const [moved] = project.cuts.splice(fromIndex, 1);
+  let insertIndex = toIndex + (placeAfter ? 1 : 0);
+
+  if(fromIndex < insertIndex) insertIndex -= 1;
+  insertIndex = Math.max(0, Math.min(insertIndex, project.cuts.length));
+
+  project.cuts.splice(insertIndex, 0, moved);
+  selectedProjectIndex = projectIndex;
+  selectedIndex = insertIndex;
+  selectedCutKeys = new Set([cutKey(projectIndex, insertIndex)]);
+  selectionAnchorCut = {projectIndex, cutIndex:insertIndex};
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+  return true;
+}
+
+
+function refreshWorkRowDom(projectIndex, cutIndex, options={}){
+  const tr = document.querySelector(`#tbody tr[data-project-index="${projectIndex}"][data-index="${cutIndex}"]`);
+  const cut = state.projects[projectIndex]?.cuts[cutIndex];
+  if(!tr || !cut) return false;
+
+  normalizeCutWork(cut);
+
+  tr.classList.remove(
+    "row-stage-lo",
+    "row-stage-check",
+    "row-stage-progress",
+    "row-stage-genga",
+    "row-stage-nigen"
+  );
+
+  const rowStage = getRowStageClass(cut);
+  if(rowStage) tr.classList.add(rowStage);
+
+  tr.classList.toggle("cut-row-selected", getEffectiveSelectedCutKeys().has(cutKey(projectIndex, cutIndex)));
+
+  tr.querySelectorAll(".work-cell[data-work]").forEach(cell => {
+    const key = cell.dataset.work;
+
+    cell.classList.toggle("work-disabled", !hasCutNumber(cut));
+
+    cell.classList.remove("state-done", "state-progress", "state-nigen", "check-done");
+
+    if(key === "lo"){
+      const cls = stageCellClass(cut.work.loState);
+      if(cls) cell.classList.add(cls);
+    } else if(key === "genga"){
+      const cls = stageCellClass(cut.work.gengaState);
+      if(cls) cell.classList.add(cls);
+    } else if(key === "retake" && cut.work.retake){
+      cell.classList.add("check-done");
+    }
+  });
+
+  updateEpisodeTotalTimeDisplay(projectIndex);
+  if(options.progress !== false) scheduleProgressBoard(30);
+  return true;
+}
+
+
+function renderTable(){
+  const project = currentProject();
+
+  document.getElementById("projectName").value = project.projectName;
+  document.getElementById("episodeNo").value = project.episodeNo;
+  document.getElementById("loDeadlineDate").value = project.loDeadlineDate ?? project.deadlineDate ?? "";
+  document.getElementById("gengaDeadlineDate").value = project.gengaDeadlineDate ?? project.deadlineDate ?? "";
+  renderProjectEpisodeSelectors();
+
+  const filter = document.getElementById("filterInput").value.trim().toLowerCase();
+  const tbody = document.getElementById("tbody");
+
+  tbody.innerHTML = `
+    <div class="project-stack">
+      ${groupedProjects().map(group => renderWorkGroup(group, filter)).join("")}
+    </div>
+  `;
+
+  selectionDomCache = [];
+  selectionRowDomCache = [];
+  applySelectionClasses();
+  renderSummary();
+  lastProgressRenderKey = "";
+  renderProgressBoard();
+}
+
+function renderWorkGroup(group, filter){
+  const activeInside = group.items.some(item => item.index === selectedProjectIndex);
+  const totalCuts = group.items.reduce((sum, item) => sum + item.project.cuts.filter(hasCutNumber).length, 0);
+  const episodeCount = group.items.length;
+  const workCollapsed = isWorkCollapsed(group.name);
+  const workToggle = workCollapsed ? "▶" : "▼";
+  const workToggleLabel = workCollapsed ? t("expand") : t("collapse");
+
+  const headerHtml = `
+      <div class="work-group-head" draggable="true" data-drag-work="${escapeHtml(workCollapseKey(group.name))}" title="${escapeHtml(t("dragWork"))}">
+        <div class="work-group-head-main">
+          <span class="drag-handle" aria-hidden="true">↕</span>
+          <button type="button" class="collapse-toggle" data-collapse-work="${escapeHtml(workCollapseKey(group.name))}" title="${escapeHtml(workToggleLabel)}" aria-label="${escapeHtml(workToggleLabel)}">${workToggle}</button>
+          <strong>${escapeHtml(group.name)}</strong>
+        </div>
+        <span></span>
+      </div>`;
+
+  if(workCollapsed){
+    return `
+      <section class="work-group collapsed ${activeInside ? "active" : ""}" data-work-name="${escapeHtml(group.name)}" data-work-key="${escapeHtml(workCollapseKey(group.name))}">
+        ${headerHtml}
+      </section>
+    `;
+  }
+
+  const prepared = group.items.map(item => {
+    const episodeCollapsed = isEpisodeCollapsed(item.project, item.index);
+    const filteredRows = item.project.cuts
+      .map((cut, index) => ({cut,index}))
+      .filter(({cut}) => !filter || String(cut.cut).toLowerCase().includes(filter) || String(cut.time).toLowerCase().includes(filter));
+
+    return {
+      project:item.project,
+      index:item.index,
+      rows:filteredRows,
+      collapsed:episodeCollapsed,
+      rowSpan:episodeCollapsed ? 1 : Math.max(filteredRows.length, 1)
+    };
+  });
+
+  const groupRowSpan = prepared.reduce((sum, item) => sum + item.rowSpan, 0);
+  let groupNameInserted = false;
+
+  const rowsHtml = prepared.map(item => {
+    const project = item.project;
+    const projectIndex = item.index;
+    const activeRow = projectIndex === selectedProjectIndex ? "work-row-active" : "";
+    const groupIndexes = group.items.map(g => g.index).join(",");
+    const episodeToggle = item.collapsed ? "▶" : "▼";
+    const episodeToggleLabel = item.collapsed ? t("expand") : t("collapse");
+    const episodeTotalTime = getEpisodeTotalTime(project);
+    const episodeCellHtml = `<div class="episode-cell-content"><button type="button" class="episode-collapse-toggle" data-collapse-episode="${escapeHtml(episodeCollapseKey(project, projectIndex))}" data-project-index="${projectIndex}" title="${escapeHtml(episodeToggleLabel)}" aria-label="${escapeHtml(episodeToggleLabel)}">${episodeToggle}</button><div class="episode-info"><span>${escapeHtml(project.episodeNo)}</span><span class="episode-total-time" data-project-index="${projectIndex}">${escapeHtml(t("totalTime"))}: ${escapeHtml(episodeTotalTime)}</span></div></div>`;
+
+    if(item.collapsed){
+      const showProjectCell = !groupNameInserted;
+      groupNameInserted = true;
+      return `
+        <tr class="episode-start collapsed-episode-row ${activeRow}" data-project-index="${projectIndex}" data-index="">
+          ${showProjectCell ? `<td rowspan="${groupRowSpan}" class="project-cell thick-left selectable-cell" data-field="projectName" data-project-index="${projectIndex}" data-group-indexes="${groupIndexes}" data-row="${projectIndex * 10000}" data-col="0">${escapeHtml(group.name)}</td>` : ""}
+          <td rowspan="1" class="episode-cell selectable-cell" data-field="episodeNo" data-project-index="${projectIndex}" data-row="${projectIndex * 10000}" data-col="1">${episodeCellHtml}</td>
+          <td colspan="6" class="empty-row">${escapeHtml(t("collapsed"))} · ${escapeHtml(t("hiddenCuts", item.project.cuts.filter(hasCutNumber).length))} · ${escapeHtml(t("totalTime"))}: ${escapeHtml(getEpisodeTotalTime(item.project))}</td>
+        </tr>
+      `;
+    }
+
+    if(item.rows.length === 0){
+      const showProjectCell = !groupNameInserted;
+      groupNameInserted = true;
+      return `
+        <tr class="episode-start ${activeRow}" data-project-index="${projectIndex}" data-index="">
+          ${showProjectCell ? `<td rowspan="${groupRowSpan}" class="project-cell thick-left selectable-cell" data-field="projectName" data-project-index="${projectIndex}" data-group-indexes="${groupIndexes}" data-row="${projectIndex * 10000}" data-col="0">${escapeHtml(group.name)}</td>` : ""}
+          <td rowspan="1" class="episode-cell selectable-cell" data-field="episodeNo" data-project-index="${projectIndex}" data-row="${projectIndex * 10000}" data-col="1">${episodeCellHtml}</td>
+          <td colspan="6" class="empty-row">${escapeHtml(t("emptyEpisode"))}</td>
+        </tr>
+      `;
+    }
+
+    return item.rows.map(({cut:c,index:i}, rowIdx) => {
+      normalizeCutWork(c);
+      const showProjectCell = !groupNameInserted;
+      if(showProjectCell) groupNameInserted = true;
+      const rowStageClass = getRowStageClass(c);
+      const selectedCutClass = (projectIndex === selectedProjectIndex && i === selectedIndex) ? "cut-row-selected" : "";
+      return `<tr class="${rowIdx === 0 ? "episode-start" : ""} ${activeRow} ${rowStageClass} ${selectedCutClass}" data-project-index="${projectIndex}" data-index="${i}" data-visible-row="${rowIdx}">
+        ${showProjectCell ? `<td rowspan="${groupRowSpan}" class="project-cell thick-left selectable-cell" data-field="projectName" data-project-index="${projectIndex}" data-group-indexes="${groupIndexes}" data-row="${projectIndex * 10000 + rowIdx}" data-col="0">${escapeHtml(group.name)}</td>` : ""}
+        ${rowIdx === 0 ? `<td rowspan="${item.rows.length}" class="episode-cell selectable-cell" data-field="episodeNo" data-project-index="${projectIndex}" data-row="${projectIndex * 10000 + rowIdx}" data-col="1">${episodeCellHtml}</td>` : ""}
+        <td class="row-action-cell selectable-cell" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="2" title="${escapeHtml(t("clickCutRowHelp"))}">
+          <span class="row-click-target" data-cut-click="${i}" data-project-index="${projectIndex}" data-cut-index="${i}">${rowIdx + 1}</span>
+        </td>
+        <td class="cut-cell selectable-cell" contenteditable="true" spellcheck="false" data-field="cut" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="3">${escapeHtml(c.cut)}</td>
+        <td class="time-cell thick-right selectable-cell" contenteditable="true" spellcheck="false" data-field="time" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="4">${escapeHtml(c.time)}</td>
+        <td class="work-cell selectable-cell ${hasCutNumber(c) ? "" : "work-disabled"} ${stageCellClass(c.work.loState)}" data-work="lo" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="5" title="${escapeHtml(t("clickLo"))}"></td>
+        <td class="work-cell selectable-cell ${hasCutNumber(c) ? "" : "work-disabled"} ${c.work.retake ? "check-done":""}" data-work="retake" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="6" title="${escapeHtml(t("clickRetake"))}"></td>
+        <td class="work-cell thick-right selectable-cell ${hasCutNumber(c) ? "" : "work-disabled"} ${stageCellClass(c.work.gengaState)}" data-work="genga" data-project-index="${projectIndex}" data-cut-index="${i}" data-row="${projectIndex * 10000 + rowIdx}" data-col="7" title="${escapeHtml(t("clickGenga"))}"></td>
+      </tr>`;
+    }).join("");
+  }).join("");
+
+  return `
+    <section class="work-group ${activeInside ? "active" : ""}" data-work-name="${escapeHtml(group.name)}" data-work-key="${escapeHtml(workCollapseKey(group.name))}">
+      ${headerHtml}
+      <div class="work-table-wrap">
+        <table>
+          <colgroup>
+            <col style="width:24%">
+            <col style="width:11%">
+            <col style="width:6%">
+            <col style="width:13%">
+            <col style="width:13%">
+            <col style="width:11%">
+            <col style="width:11%">
+            <col style="width:11%">
+          </colgroup>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function escapeHtml(value){
+  return String(value ?? "").replace(/[&<>"']/g, s => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[s]));
+}
+
+let selectedCells = new Set();
+let selectedCutKeys = new Set();
+let selectionAnchor = null;
+let selectionAnchorCut = null;
+let isShiftDragging = false;
+let selectionDomCache = [];
+let selectionRowDomCache = [];
+
+function cellKey(row, col){
+  return `${row}:${col}`;
+}
+
+function cutKey(projectIndex, cutIndex){
+  return `${projectIndex}:${cutIndex}`;
+}
+
+function parseCutKey(key){
+  const [projectIndex, cutIndex] = String(key).split(":").map(Number);
+  return {projectIndex, cutIndex};
+}
+
+function getCellCoords(cell){
+  return {
+    row:Number(cell.dataset.row),
+    col:Number(cell.dataset.col)
+  };
+}
+
+function clearSelectionDomCache(){
+  selectionDomCache.forEach(cell => {
+    if(!cell) return;
+    cell.classList.remove(
+      "selected-cell",
+      "selected-range",
+      "range-edge-top",
+      "range-edge-bottom",
+      "range-edge-left",
+      "range-edge-right"
+    );
+  });
+  selectionDomCache = [];
+
+  selectionRowDomCache.forEach(row => {
+    if(row) row.classList.remove("cut-row-selected");
+  });
+  selectionRowDomCache = [];
+}
+
+function setSingleCellSelection(cell){
+  const {row, col} = getCellCoords(cell);
+  selectedCells = new Set([cellKey(row, col)]);
+  selectionAnchor = {row, col};
+
+  const tr = cell.closest("tr[data-project-index][data-index]");
+  if(tr && tr.dataset.index !== ""){
+    selectedProjectIndex = Number(tr.dataset.projectIndex);
+    selectedIndex = Number(tr.dataset.index);
+    selectedCutKeys = new Set([cutKey(selectedProjectIndex, selectedIndex)]);
+    selectionAnchorCut = {projectIndex:selectedProjectIndex, cutIndex:selectedIndex};
+  } else {
+    selectedCutKeys = new Set();
+    selectionAnchorCut = null;
+  }
+
+  applySelectionClasses();
+}
+
+function setRangeSelection(from, to){
+  const minRow = Math.min(from.row, to.row);
+  const maxRow = Math.max(from.row, to.row);
+  const minCol = Math.min(from.col, to.col);
+  const maxCol = Math.max(from.col, to.col);
+
+  selectedCells = new Set();
+  for(let r=minRow; r<=maxRow; r++){
+    for(let c=minCol; c<=maxCol; c++){
+      selectedCells.add(cellKey(r, c));
+    }
+  }
+  applySelectionClasses({minRow, maxRow, minCol, maxCol});
+}
+
+function getEffectiveSelectedCutKeys(){
+  if(selectedCutKeys.size > 0) return selectedCutKeys;
+  if(selectedIndex !== null && selectedIndex !== undefined && state.projects[selectedProjectIndex]?.cuts[selectedIndex]){
+    return new Set([cutKey(selectedProjectIndex, selectedIndex)]);
+  }
+  return new Set();
+}
+
+function applySelectionClasses(range=null){
+  clearSelectionDomCache();
+
+  const touchedCells = [];
+  const touchedRows = [];
+
+  getEffectiveSelectedCutKeys().forEach(key => {
+    const {projectIndex, cutIndex} = parseCutKey(key);
+    if(Number.isNaN(projectIndex) || Number.isNaN(cutIndex)) return;
+
+    const tr = document.querySelector(`#tbody tr[data-project-index="${projectIndex}"][data-index="${cutIndex}"]`);
+    if(!tr) return;
+
+    tr.classList.add("cut-row-selected");
+    touchedRows.push(tr);
+
+    tr.querySelectorAll(".selectable-cell").forEach(cell => {
+      cell.classList.add("selected-cell");
+      touchedCells.push(cell);
+    });
+  });
+
+  selectionDomCache = touchedCells;
+  selectionRowDomCache = touchedRows;
+}
+
+function buildNavigationGrid(){
+  const grid = [];
+
+  document.querySelectorAll("#tbody .work-table-wrap table").forEach(table => {
+    const spans = [];
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+    rows.forEach(tr => {
+      const slots = [];
+
+      for(let c=0; c<8; c++){
+        const span = spans[c];
+        if(span && span.remaining > 0){
+          slots[c] = span.cell;
+          span.remaining -= 1;
+          if(span.remaining <= 0) spans[c] = null;
+        }
+      }
+
+      let col = 0;
+      Array.from(tr.cells).forEach(cell => {
+        while(slots[col]) col += 1;
+
+        const colSpan = Math.max(1, Number(cell.colSpan || 1));
+        const rowSpan = Math.max(1, Number(cell.rowSpan || 1));
+
+        for(let dc=0; dc<colSpan; dc++){
+          slots[col + dc] = cell;
+          if(rowSpan > 1){
+            spans[col + dc] = {cell, remaining:rowSpan - 1};
+          }
+        }
+        col += colSpan;
+      });
+
+      grid.push(slots);
+    });
+  });
+
+  return grid;
+}
+
+function getCurrentSelectedCell(){
+  const active = document.activeElement;
+  if(active && active.matches && active.matches("#tbody .selectable-cell")) return active;
+
+  const selected = document.querySelector("#tbody .selected-cell");
+  if(selected) return selected;
+
+  const key = Array.from(selectedCells)[0];
+  if(!key) return null;
+
+  return Array.from(document.querySelectorAll("#tbody .selectable-cell")).find(cell => {
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
+    return cellKey(row, col) === key;
+  }) || null;
+}
+
+function findCellInGrid(grid, targetCell){
+  for(let r=0; r<grid.length; r++){
+    for(let c=0; c<8; c++){
+      if(grid[r][c] === targetCell) return {row:r, col:c};
+    }
+  }
+  return null;
+}
+
+function isNavigableCell(cell){
+  return Boolean(cell && cell.classList && cell.classList.contains("selectable-cell"));
+}
+
+function closestNavigableInRow(rowSlots, preferredCol, currentCell=null){
+  let best = null;
+  let bestDist = Infinity;
+
+  for(let c=0; c<8; c++){
+    const cell = rowSlots[c];
+    if(!isNavigableCell(cell) || cell === currentCell) continue;
+
+    const dist = Math.abs(c - preferredCol);
+    if(dist < bestDist){
+      best = cell;
+      bestDist = dist;
+    }
+  }
+
+  return best;
+}
+
+function findArrowTarget(currentCell, arrowKey){
+  const grid = buildNavigationGrid();
+  const pos = findCellInGrid(grid, currentCell);
+  if(!pos) return null;
+
+  if(arrowKey === "ArrowLeft" || arrowKey === "ArrowRight"){
+    const step = arrowKey === "ArrowLeft" ? -1 : 1;
+
+    for(let c=pos.col + step; c>=0 && c<7; c += step){
+      const cell = grid[pos.row][c];
+      if(isNavigableCell(cell) && cell !== currentCell) return cell;
+    }
+    return null;
+  }
+
+  if(arrowKey === "ArrowUp" || arrowKey === "ArrowDown"){
+    const step = arrowKey === "ArrowUp" ? -1 : 1;
+
+    for(let r=pos.row + step; r>=0 && r<grid.length; r += step){
+      const direct = grid[r][pos.col];
+      if(isNavigableCell(direct) && direct !== currentCell) return direct;
+
+      const nearby = closestNavigableInRow(grid[r], pos.col, currentCell);
+      if(nearby) return nearby;
+    }
+  }
+
+  return null;
+}
+
+function selectCellByKeyboard(cell){
+  if(!cell) return;
+
+  const tr = cell.closest("tr");
+  const nextProjectIndex = Number(cell.dataset.projectIndex ?? tr?.dataset.projectIndex ?? selectedProjectIndex);
+  selectedProjectIndex = Number.isNaN(nextProjectIndex) ? selectedProjectIndex : nextProjectIndex;
+
+  selectedIndex = getIndexForCell(cell, tr);
+  if(cell.dataset.cutIndex !== undefined){
+    selectedIndex = Number(cell.dataset.cutIndex);
+  }
+
+  setSingleCellSelection(cell);
+  refreshCurrentControls();
+
+  if(cell.isContentEditable){
+    requestAnimationFrame(() => {
+      if(document.body.contains(cell)){
+        cell.focus();
+        placeCaretAtEnd(cell);
+      }
+    });
+  } else {
+    const active = document.activeElement;
+    if(active && active.isContentEditable) active.blur();
+  }
+
+  cell.scrollIntoView({block:"nearest", inline:"nearest"});
+}
+
+function handleArrowNavigation(e){
+  const arrowKeys = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"];
+  if(!arrowKeys.includes(e.key)) return false;
+  if(e.ctrlKey || e.metaKey || e.altKey) return false;
+  if(e.shiftKey) return false;
+
+  const active = document.activeElement;
+  const tbody = document.getElementById("tbody");
+  const isTableEditable = active && active.isContentEditable && tbody.contains(active);
+  const isOutsideForm = active && ["INPUT","TEXTAREA","SELECT"].includes(active.tagName);
+
+  if(isOutsideForm && !isTableEditable) return false;
+
+  const menu = document.getElementById("stageMenu");
+  if(menu && !menu.hidden) return false;
+
+  const currentCell = getCurrentSelectedCell();
+  if(!currentCell) return false;
+
+  if(isTableEditable){
+    updateCellValueFromDom(active);
+    if(active.dataset.field === "time"){
+      const projectIndex = Number(active.dataset.projectIndex ?? selectedProjectIndex);
+      updateEpisodeTotalTimeDisplay(projectIndex);
+    }
+    scheduleSave();
+  }
+
+  const targetCell = findArrowTarget(currentCell, e.key);
+  if(!targetCell) return false;
+
+  e.preventDefault();
+  selectCellByKeyboard(targetCell);
+  return true;
+}
+
+document.getElementById("tbody").addEventListener("keydown", e => {
+  if(handleArrowNavigation(e)) return;
+
+  const active = document.activeElement;
+  if(active && active.isContentEditable) return;
+  if(e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const key = Array.from(selectedCells)[0];
+  if(!key) return;
+  let target = null;
+  for(const cell of document.querySelectorAll("#tbody .selectable-cell")){
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
+    if(cellKey(row, col) === key && cell.isContentEditable){
+      target = cell;
+      break;
+    }
+  }
+  if(target){
+    const tr = target.closest("tr");
+    selectedProjectIndex = Number(target.dataset.projectIndex ?? tr?.dataset.projectIndex ?? selectedProjectIndex);
+    selectedIndex = getIndexForCell(target, tr);
+    target.focus();
+    placeCaretAtEnd(target);
+  }
+});
+
+document.addEventListener("keydown", e => {
+  handleArrowNavigation(e);
+});
+
+document.addEventListener("mouseup", () => {
+  isShiftDragging = false;
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Shift"){
+    document.body.classList.add("shift-selecting");
+  }
+});
+
+document.addEventListener("keyup", e => {
+  if(e.key === "Shift"){
+    document.body.classList.remove("shift-selecting");
+    isShiftDragging = false;
+  }
+});
+
+
+
+document.getElementById("tbody").addEventListener("click", e => {
+  const marker = e.target.closest("[data-cut-click]");
+  if(!marker) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(cutClickTimer){
+    clearTimeout(cutClickTimer);
+    cutClickTimer = null;
+  }
+
+  handleCutRowSingleClick(marker.dataset.projectIndex, marker.dataset.cutClick, e);
+});
+
+document.getElementById("tbody").addEventListener("dblclick", e => {
+  const marker = e.target.closest("[data-cut-click]");
+  if(!marker) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(cutClickTimer){
+    clearTimeout(cutClickTimer);
+    cutClickTimer = null;
+  }
+
+  handleCutRowDoubleClick(marker.dataset.projectIndex, marker.dataset.cutClick);
+});
+
+
+
+let draggedWorkKey = null;
+let dragPlaceAfter = false;
+
+document.getElementById("tbody").addEventListener("dragstart", e => {
+  const header = e.target.closest(".work-group-head[data-drag-work]");
+  if(!header || e.target.closest("button, input, select, [contenteditable='true']")){
+    e.preventDefault();
+    return;
+  }
+
+  draggedWorkKey = header.dataset.dragWork;
+  const group = header.closest(".work-group");
+  if(group) group.classList.add("dragging");
+
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", draggedWorkKey);
+});
+
+document.getElementById("tbody").addEventListener("dragover", e => {
+  if(!draggedWorkKey) return;
+
+  const targetGroup = e.target.closest(".work-group[data-work-key]");
+  if(!targetGroup || targetGroup.dataset.workKey === draggedWorkKey) return;
+
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+
+  document.querySelectorAll("#tbody .work-group.drop-before, #tbody .work-group.drop-after").forEach(el => {
+    el.classList.remove("drop-before","drop-after");
+  });
+
+  const rect = targetGroup.getBoundingClientRect();
+  dragPlaceAfter = e.clientY > rect.top + rect.height / 2;
+  targetGroup.classList.add(dragPlaceAfter ? "drop-after" : "drop-before");
+});
+
+document.getElementById("tbody").addEventListener("drop", e => {
+  if(!draggedWorkKey) return;
+
+  const targetGroup = e.target.closest(".work-group[data-work-key]");
+  if(!targetGroup) return;
+
+  e.preventDefault();
+  const moved = reorderWorkGroups(draggedWorkKey, targetGroup.dataset.workKey, dragPlaceAfter);
+  draggedWorkKey = null;
+  dragPlaceAfter = false;
+  clearWorkDropClasses();
+
+  if(moved){
+    saveState();
+    renderTable();
+  }
+});
+
+document.getElementById("tbody").addEventListener("dragend", () => {
+  draggedWorkKey = null;
+  dragPlaceAfter = false;
+  clearWorkDropClasses();
+});
+
+document.getElementById("tbody").addEventListener("mousedown", e => {
+  if(e.target.closest("[data-collapse-work], [data-collapse-episode], .drag-handle")) return;
+  if(e.target.closest("[data-cut-click]")){
+    // Row-number click has its own selection logic.
+    // Prevent mousedown from resetting the Shift-selection anchor before click runs.
+    return;
+  }
+  const cell = e.target.closest(".selectable-cell");
+  const tr = e.target.closest("tr");
+  if(!cell || !tr) return;
+
+  const nextProjectIndex = Number(cell.dataset.projectIndex ?? tr.dataset.projectIndex ?? selectedProjectIndex);
+  selectedProjectIndex = Number.isNaN(nextProjectIndex) ? selectedProjectIndex : nextProjectIndex;
+  selectedIndex = getIndexForCell(cell, tr);
+
+  // CUT / TIME 입력은 병합 셀이나 sticky 위치가 아니라 셀 자체의 data-cut-index를 기준으로 고정한다.
+  if(cell.dataset.cutIndex !== undefined){
+    selectedIndex = Number(cell.dataset.cutIndex);
+  }
+
+  isShiftDragging = false;
+  setSingleCellSelection(cell);
+  refreshCurrentControls();
+
+  if(cell.isContentEditable){
+    // CUT/TIME도 作品名처럼 클릭한 바로 그 셀에 포커스되게 한다.
+    requestAnimationFrame(() => {
+      if(document.body.contains(cell)){
+        cell.focus();
+        if(String(cell.textContent || "").length === 0) placeCaretAtEnd(cell);
+      }
+    });
+  }
+});
+
+document.getElementById("tbody").addEventListener("mouseover", e => {
+  // Multi-cell drag selection is disabled.
+});
+
+document.getElementById("tbody").addEventListener("click", e => {
+  const tr = e.target.closest("tr");
+  if(!tr) return;
+
+  selectedProjectIndex = Number(e.target.dataset.projectIndex ?? tr.dataset.projectIndex ?? selectedProjectIndex);
+  selectedIndex = e.target.dataset.cutIndex !== undefined
+    ? Number(e.target.dataset.cutIndex)
+    : (tr.dataset.index === "" || tr.dataset.index === undefined ? null : Number(tr.dataset.index));
+
+  if(e.target.dataset.work && selectedIndex !== null){
+    const key = e.target.dataset.work;
+    const project = currentProject();
+    const cut = project.cuts[selectedIndex];
+
+    if(!hasCutNumber(cut)){
+      clearWorkForEmptyCut(cut);
+      if(!refreshWorkRowDom(selectedProjectIndex, selectedIndex)){
+        renderTable();
+      }
+      return;
+    }
+
+    normalizeCutWork(cut);
+
+    if(key === "lo"){
+      cut.work.loState = cycleStageState(cut.work.loState, false);
+      cut.work.lo = cut.work.loState === "done";
+    } else if(key === "genga"){
+      cut.work.gengaState = cycleStageState(cut.work.gengaState, true);
+      cut.work.genga = cut.work.gengaState === "done";
+      cut.work.nigen = cut.work.gengaState === "nigen";
+    } else if(key === "retake"){
+      cut.work.retake = !cut.work.retake;
+    }
+
+    normalizeCutWork(cut);
+    updateStatusFromWork(cut);
+    saveState();
+    if(!refreshWorkRowDom(selectedProjectIndex, selectedIndex)){
+      renderTable();
+    }
+  }
+});
+
+document.getElementById("tbody").addEventListener("contextmenu", e => {
+  const cell = e.target.closest(".work-cell[data-work='lo'], .work-cell[data-work='genga']");
+  if(!cell) return;
+  showStageMenu(e, cell);
+});
+
+document.getElementById("stageMenu").addEventListener("click", e => {
+  const button = e.target.closest("[data-stage-choice]");
+  if(!button || !stageMenuTarget) return;
+
+  const {key, projectIndex, cutIndex} = stageMenuTarget;
+  const cut = state.projects[projectIndex]?.cuts[cutIndex];
+  if(!cut) return hideStageMenu();
+  if(!hasCutNumber(cut)){
+    clearWorkForEmptyCut(cut);
+    hideStageMenu();
+    if(!refreshWorkRowDom(projectIndex, cutIndex)){
+      renderTable();
+    }
+    return;
+  }
+
+  selectedProjectIndex = projectIndex;
+  selectedIndex = cutIndex;
+  applyStageChoiceToCut(key, cut, button.dataset.stageChoice);
+  saveState();
+  hideStageMenu();
+  if(!refreshWorkRowDom(projectIndex, cutIndex)){
+    renderTable();
+  }
+});
+
+document.addEventListener("mousedown", e => {
+  const menu = document.getElementById("stageMenu");
+  if(menu && !menu.hidden && !menu.contains(e.target)){
+    hideStageMenu();
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape") hideStageMenu();
+});
+
+window.addEventListener("resize", hideStageMenu);
+window.addEventListener("scroll", hideStageMenu, true);
+
+document.getElementById("tbody").addEventListener("focusout", e => {
+  const td = e.target.closest("[contenteditable='true']");
+  if(!td) return;
+
+  updateCellValueFromDom(td);
+  saveState();
+
+  const field = td.dataset.field;
+  setTimeout(() => {
+    const active = document.activeElement;
+    const stillEditingTable = active && document.getElementById("tbody").contains(active) && active.isContentEditable;
+
+    if((field === "projectName" || field === "episodeNo") && !stillEditingTable){
+      renderTable();
+    } else {
+      // CUT/TIME은 입력 중 칸이 밀리지 않도록 표 전체를 다시 그리지 않는다.
+      refreshCurrentControls();
+    }
+  }, 0);
+});
+
+document.getElementById("tbody").addEventListener("input", e => {
+  const td = e.target.closest("[contenteditable='true']");
+  if(!td) return;
+
+  updateCellValueFromDom(td);
+
+  if(td.dataset.field === "cut" || td.dataset.field === "time"){
+    const projectIndex = Number(td.dataset.projectIndex ?? selectedProjectIndex);
+    const cutIndex = Number(td.dataset.cutIndex ?? td.closest("tr")?.dataset.index);
+
+    if(td.dataset.field === "time"){
+      updateEpisodeTotalTimeDisplay(projectIndex);
+    }
+
+    if(td.dataset.field === "cut" && !Number.isNaN(cutIndex)){
+      refreshWorkRowDom(projectIndex, cutIndex, {progress:false});
+    }
+
+    scheduleProgressBoard();
+  }
+
+  scheduleSave();
+});
+
+
+document.getElementById("undoBtn").addEventListener("click", undoLastChange);
+
+document.getElementById("themeToggleBtn").addEventListener("click", toggleTheme);
+
+document.getElementById("guideToggleBtn").addEventListener("click", () => {
+  setGuideVisible(true);
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){
+    hideStageMenu();
+  }
+});
+
+
+
+document.getElementById("projectName").addEventListener("input", e => {
+  currentProject().projectName = e.target.value;
+  scheduleSave();
+  scheduleRenderTable();
+});
+document.getElementById("episodeNo").addEventListener("input", e => {
+  currentProject().episodeNo = e.target.value;
+  scheduleSave();
+  scheduleRenderTable();
+});
+
+function syncLegacyDeadlineFromSplit(project){
+  const lo = project.loDeadlineDate ?? "";
+  const genga = project.gengaDeadlineDate ?? "";
+  project.deadlineDate = lo === genga ? lo : "";
+}
+
+function updateSplitDeadline(kind, value){
+  const project = currentProject();
+  if(kind === "lo"){
+    project.loDeadlineDate = value || "";
+  } else {
+    project.gengaDeadlineDate = value || "";
+  }
+  syncLegacyDeadlineFromSplit(project);
+  saveState();
+  renderProgressBoard();
+}
+
+["input","change"].forEach(eventName => {
+  document.getElementById("loDeadlineDate").addEventListener(eventName, e => {
+    updateSplitDeadline("lo", e.target.value);
+  });
+
+  document.getElementById("gengaDeadlineDate").addEventListener(eventName, e => {
+    updateSplitDeadline("genga", e.target.value);
+  });
+});
+
+document.getElementById("filterInput").addEventListener("input", () => scheduleRenderTable(80));
+
+document.getElementById("projectSelect").addEventListener("change", e => {
+  selectedProjectIndex = Number(e.target.value);
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("episodeSelect").addEventListener("change", e => {
+  selectedProjectIndex = Number(e.target.value);
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("tbody").addEventListener("click", e => {
+  const workBtn = e.target.closest("[data-collapse-work]");
+  const episodeBtn = e.target.closest("[data-collapse-episode]");
+
+  if(workBtn || episodeBtn){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    if(workBtn){
+      const key = workBtn.dataset.collapseWork;
+      const currentlyCollapsed = Boolean(state.collapsedWorks?.[key]);
+      setWorkCollapsed(key, !currentlyCollapsed);
+    }
+
+    if(episodeBtn){
+      const pidx = Number(episodeBtn.dataset.projectIndex);
+      const project = state.projects[pidx];
+      if(project){
+        const currentlyCollapsed = isEpisodeCollapsed(project, pidx);
+        setEpisodeCollapsed(project, pidx, !currentlyCollapsed);
+        selectedProjectIndex = pidx;
+      }
+    }
+
+    selectedIndex = null;
+    selectedCutKeys = new Set();
+    selectionAnchorCut = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }
+});
+
+document.getElementById("tbody").addEventListener("click", e => {
+  if(e.target.closest("[data-collapse-work], [data-collapse-episode]")) return;
+  const selectorCell = e.target.closest(".project-cell, .episode-cell");
+  if(!selectorCell) return;
+  selectedProjectIndex = Number(selectorCell.dataset.projectIndex ?? selectedProjectIndex);
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("addWorkBtn").addEventListener("click", () => {
+  const projectName = prompt(t("promptNewWork"), "");
+  if(projectName === null) return;
+  const episodeNo = prompt(t("promptFirstEpisode"), "");
+  if(episodeNo === null) return;
+
+  state.projects.push(makeProject(projectName.trim() || "Untitled", episodeNo.trim() || "-", blankCuts(10), ""));
+  selectedProjectIndex = state.projects.length - 1;
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("addEpisodeBtn").addEventListener("click", () => {
+  const base = currentProject();
+  const episodeNo = prompt(t("promptAddEpisode", base.projectName || "Untitled"), "");
+  if(episodeNo === null) return;
+
+  state.projects.push(makeProject(base.projectName || "Untitled", episodeNo.trim() || "-", blankCuts(10), ""));
+  selectedProjectIndex = state.projects.length - 1;
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("removeWorkBtn").addEventListener("click", () => {
+  if(state.projects.length <= 1){
+    alert(t("alertMinWork"));
+    return;
+  }
+
+  const project = currentProject();
+  const name = normalizeWorkName(project.projectName);
+  const indexes = state.projects
+    .map((p, idx) => ({p, idx}))
+    .filter(item => normalizeWorkName(item.p.projectName) === name)
+    .map(item => item.idx);
+
+  if(confirm(t("confirmRemoveWork", name, indexes.length))){
+    state.projects = state.projects.filter((_, idx) => !indexes.includes(idx));
+    if(!state.projects.length) state = makeEmptyState();
+    selectedProjectIndex = Math.min(selectedProjectIndex, state.projects.length - 1);
+    selectedProjectIndex = Math.max(0, selectedProjectIndex);
+    selectedIndex = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }
+});
+
+document.getElementById("removeEpisodeBtn").addEventListener("click", () => {
+  if(state.projects.length <= 1){
+    alert(t("alertMinEpisode"));
+    return;
+  }
+
+  const project = currentProject();
+  if(confirm(t("confirmRemoveEpisode", projectLabel(project)))){
+    state.projects.splice(selectedProjectIndex, 1);
+    if(!state.projects.length) state = makeEmptyState();
+    selectedProjectIndex = Math.max(0, Math.min(selectedProjectIndex, state.projects.length - 1));
+    selectedIndex = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }
+});
+
+document.getElementById("addCutBtn").addEventListener("click", () => {
+  document.getElementById("modalBg").style.display = "flex";
+  document.getElementById("newCut").focus();
+});
+document.getElementById("cancelModal").addEventListener("click", closeModal);
+document.getElementById("modalBg").addEventListener("click", e => {
+  if(e.target.id === "modalBg") closeModal();
+});
+function closeModal(){
+  document.getElementById("modalBg").style.display = "none";
+}
+document.getElementById("saveNewCut").addEventListener("click", () => {
+  const item = {
+    cut: document.getElementById("newCut").value.trim(),
+    time: document.getElementById("newTime").value.trim(),
+    owner:"",
+    deadline:"",
+    status:"",
+    memo:"",
+    work:{lo:false, retake:false, genga:false}
+  };
+  if(!item.cut && !item.time) return;
+  currentProject().cuts.push(item);
+  ["newCut","newTime"].forEach(id => document.getElementById(id).value = "");
+  saveState();
+  closeModal();
+  renderTable();
+});
+
+document.getElementById("addManyBtn").addEventListener("click", () => {
+  const n = getBulkCutCount();
+  const project = currentProject();
+  for(let i=0; i<n; i++){
+    project.cuts.push(blankCut());
+  }
+  saveState();
+  renderTable();
+});
+
+document.getElementById("removeManyBtn").addEventListener("click", () => {
+  const n = getBulkCutCount();
+  const project = currentProject();
+
+  if(!project.cuts.length){
+    alert(t("alertNoCutRows"));
+    return;
+  }
+
+  const removeCount = Math.min(n, project.cuts.length);
+  const targets = project.cuts.slice(-removeCount);
+  const hasData = targets.some(c => {
+    normalizeCutWork(c);
+    return String(c.cut || "").trim() || String(c.time || "").trim() || c.work.loState || c.work.retake || c.work.gengaState;
+  });
+
+  if(hasData && !confirm(t("confirmRemoveBulk", removeCount))){
+    return;
+  }
+
+  project.cuts.splice(project.cuts.length - removeCount, removeCount);
+  selectedIndex = null;
+  selectedCells = new Set();
+  selectionAnchor = null;
+  saveState();
+  renderTable();
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if(confirm(t("confirmReset"))){
+    safeRemoveItem(STORAGE_KEY);
+    safeRemoveItem(OLD_STORAGE_KEY);
+    state = makeEmptyState();
+    selectedProjectIndex = 0;
+    selectedIndex = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }
+});
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const project = currentProject();
+  a.download = `animator_schedule_multi_${project.projectName || "project"}_${project.episodeNo || "ep"}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  document.getElementById("fileInput").click();
+});
+
+document.getElementById("languageSelect").addEventListener("change", e => {
+  uiLang = e.target.value;
+  safeSetItem(LANG_STORAGE_KEY, uiLang);
+  applyLanguage();
+  renderTable();
+});
+
+document.getElementById("fileInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const imported = JSON.parse(text);
+    if(!Array.isArray(imported.projects) && !Array.isArray(imported.cuts)) throw new Error("projects/cuts 없음");
+    state = normalizeState(imported);
+    selectedProjectIndex = state.selectedProjectIndex || 0;
+    selectedIndex = null;
+    saveState();
+    renderTable();
+  }catch(err){
+    alert(t("importFail"));
+  }finally{
+    e.target.value = "";
+  }
+});
+
+function getSelectedCutTargets(){
+  const targets = [];
+  const seen = new Set();
+
+  getEffectiveSelectedCutKeys().forEach(key => {
+    const {projectIndex, cutIndex} = parseCutKey(key);
+    if(Number.isNaN(projectIndex) || Number.isNaN(cutIndex)) return;
+    if(!state.projects[projectIndex]?.cuts[cutIndex]) return;
+
+    const safeKey = `${projectIndex}:${cutIndex}`;
+    if(!seen.has(safeKey)){
+      seen.add(safeKey);
+      targets.push({projectIndex, cutIndex});
+    }
+  });
+
+  return targets;
+}
+
+
+function removeSelectedCut(){
+  const targets = getSelectedCutTargets();
+
+  if(targets.length === 0){
+    alert(t("alertSelectCut"));
+    return;
+  }
+
+  let label = "";
+  if(targets.length === 1){
+    const target = targets[0];
+    const selectedCut = state.projects[target.projectIndex]?.cuts[target.cutIndex];
+    label = selectedCut?.cut ? `${t("cut")} ${selectedCut.cut}` : t("emptyRowLabel", target.cutIndex + 1);
+  } else {
+    label = `${targets.length}${t("cut")}`;
+  }
+
+  if(confirm(t("confirmRemoveCut", label))){
+    const grouped = new Map();
+
+    targets.forEach(({projectIndex, cutIndex}) => {
+      if(!grouped.has(projectIndex)) grouped.set(projectIndex, []);
+      grouped.get(projectIndex).push(cutIndex);
+    });
+
+    grouped.forEach((indexes, projectIndex) => {
+      const project = state.projects[projectIndex];
+      if(!project) return;
+
+      [...new Set(indexes)]
+        .sort((a,b) => b - a)
+        .forEach(index => {
+          if(index >= 0 && index < project.cuts.length){
+            project.cuts.splice(index, 1);
+          }
+        });
+    });
+
+    selectedIndex = null;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    saveState();
+    renderTable();
+  }
+}
+
+document.getElementById("removeCutBtn").addEventListener("click", removeSelectedCut);
+
+
+document.addEventListener("keydown", e => {
+  const key = String(e.key || "").toLowerCase();
+  if((e.ctrlKey || e.metaKey) && !e.shiftKey && key === "z"){
+    e.preventDefault();
+    undoLastChange();
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Delete" && selectedIndex !== null && document.activeElement.tagName !== "INPUT" && !document.activeElement.isContentEditable){
+    removeSelectedCut();
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  if(saveTimer) saveState();
+});
+
+markHistoryCommitted();
+applyTheme();
+applyLanguage();
+renderTable();
+</script>
+</body>
+</html>
